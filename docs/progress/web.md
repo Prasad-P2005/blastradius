@@ -21,11 +21,20 @@
   `run_finished{error}`. Missing tenant graph → 503 "tenant graph not loaded".
 - `next build` passes (`NEXT_DIST_DIR=.next-build pnpm build` to build next to a running dev server).
 
+- Verified against REAL data (snapshots loaded into an isolated `web_` namespace with
+  `BLASTRADIUS_GRAPH_NAMESPACE=web`, dev server on :3002): acme overview/neighbourhood, live scripted incident
+  run "Checkout 5xx at 12%" (suspect PR #4059, expert, precedent INC-2026-037, 3 dry-run actions), Why? drawer
+  (cypher matched, rows, evidence paths, Focus on graph), close incident (Incident `INC-<session>` + runbook written),
+  new session recalls it (cross-session recall card), session replay from the dropdown, memory inspector on the
+  closed session, live ask "Why did we move cart to Valkey?" (sources ADR-001 / t-0001 / doc). globex incident via curl.
+- `src/fixtures/recorded.acme.checkout.json`: a real recorded run used as a regression test.
+
 ## In progress
-- Waiting for data to be loaded to verify the UI against real graph data.
+- nothing
 
 ## Next
-- Integrate with real packages as they land; verify every route with curl; screenshots against real data.
+- llm mode is untested in the UI (no API key on this machine); the badge reads `run_started.agentMode/model`.
+- If agents/graph change event shapes, re-record `recorded.acme.checkout.json` from `/api/sessions/<id>/messages`.
 
 ## Blockers
-- none yet
+- none
