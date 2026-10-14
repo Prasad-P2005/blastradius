@@ -10,8 +10,11 @@ Owner: platform workstream (`apps/mcp`, infra, CI, README + docs).
 - `.env.example`: added `MCP_HOST`, `WEB_PORT`.
 - Drafts: README, ARCHITECTURE, DEPLOY, DEMO (DEMO has TODO placeholders for scenario ids).
 
+- **`docker build --target mcp .` succeeds** (image 1.28 GB). The first try failed at `corepack install` (network timeout), so pnpm is now installed with `npm i -g` and retries. A second try failed at `--frozen-lockfile` while the web agent's install was mid-flight (lockfile out of sync), and passed once it settled. I ran the image on `blastradius_default` (`-p 3334:3333`, `FALKORDB_URL=redis://falkordb:6379`): `/health` 200, tools/list returned 15 tools; the container was removed afterwards. Running falkordb/postgres untouched.
+- Int test now also covers FalkorDB unreachable → `isError` (stdio subprocess with `FALKORDB_URL=redis://127.0.0.1:1`). 7/8 pass; `critical_services` returns 0 rows only because no snapshot is loaded yet (the tool itself is implemented).
+
 ## In progress
-- `docker build --target mcp .` The first try failed at `corepack install` (network timeout fetching the pnpm tarball; this machine's network is flaky, and Docker Hub pulls also time out). Switched to `npm install -g pnpm@10.33.0` (with retries) and rebuilding.
+- Waiting for data snapshots (`data/acme.json`) to re-run the read-tool test and dry-run CI.
 
 ## Next
 - Re-run the MCP int test once graph tools and data land (`critical_services` must return rows).

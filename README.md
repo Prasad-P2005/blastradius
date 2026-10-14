@@ -172,7 +172,7 @@ With no API key, `AGENT_MODE=auto` runs **scripted mode**: the same tools in a f
 
 ## Use the tools from Claude Code, Claude Desktop or Cursor
 
-The MCP server exposes the same 16 tools the agents use, plus two resources (`blastradius://tenants`, `blastradius://schema`). Every tool takes `tenant` (`acme` or `globex`). `record_finding` (a graph write) only appears when `MCP_ALLOW_WRITES=true`.
+The MCP server exposes the same tool registry the agents use (15 read tools by default; all 16 with `MCP_ALLOW_WRITES=true`), plus two resources (`blastradius://tenants`, `blastradius://schema`). Every tool takes `tenant` (`acme` or `globex`). `record_finding` (a graph write) only appears when `MCP_ALLOW_WRITES=true`.
 
 **Claude Code over HTTP.** Start the server, then add it:
 
