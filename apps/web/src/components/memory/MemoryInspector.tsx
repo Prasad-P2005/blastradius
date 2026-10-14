@@ -101,6 +101,9 @@ export function MemoryInspector() {
           <button type="button" onClick={() => setShowCypher((v) => !v)} className={cx("rounded border px-2 py-0.5 font-mono text-2xs", showCypher ? "border-accent/50 bg-accent/15 text-accent" : "border-line-2 text-muted hover:text-fg")}>
             Why? cypher
           </button>
+          <Link href={`/people?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
+            People
+          </Link>
           <Link href={`/?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
             ← Console
           </Link>

@@ -1,0 +1,83 @@
+{
+ "items": {
+  "Person:dana-whitfield": [
+   {
+    "at": 1760499880000,
+    "kind": "finding",
+    "uid": "Finding:f_c4expert",
+    "title": "Named by Expert finder: on call for checkout this week",
+    "detail": "expert \u00b7 confidence 0.85",
+    "sessionId": "s_acme_demo01"
+   },
+   {
+    "at": 1760489200000,
+    "kind": "on_call",
+    "uid": "Service:checkout",
+    "title": "On call for checkout",
+    "detail": "week of 2026-10-12"
+   },
+   {
+    "at": 1760489200000,
+    "kind": "on_call",
+    "uid": "Service:payment",
+    "title": "On call for payment",
+    "detail": "week of 2026-10-12"
+   },
+   {
+    "at": 1760327200000,
+    "kind": "thread",
+    "uid": "Thread:t-0014",
+    "title": "#checkout-payments: PlaceOrder p99 creeping up after OTLP change",
+    "detail": "posted 4 messages"
+   },
+   {
+    "at": 1759722400000,
+    "kind": "incident",
+    "uid": "Incident:INC-2026-037",
+    "title": "Responded to INC-2026-037: checkout OOM-killed after OTLP exporter migration",
+    "detail": "SEV2 \u00b7 resolved"
+   },
+   {
+    "at": 1759117600000,
+    "kind": "issue",
+    "uid": "Issue:ACME-118",
+    "title": "Raise checkout memory limit in Helm values",
+    "detail": "in_progress \u00b7 P2"
+   },
+   {
+    "at": 1757044000000,
+    "kind": "decision",
+    "uid": "Decision:ADR-006",
+    "title": "Decided ADR-006: OTLP over http/protobuf for all Go services",
+    "detail": "accepted"
+   }
+  ],
+  "Person:piotr-kielkowicz": [
+   {
+    "at": 1760499940000,
+    "kind": "finding",
+    "uid": "Finding:f_b2cause",
+    "title": "Named by Investigator: author of suspect PR #4059",
+    "detail": "cause \u00b7 confidence 0.70",
+    "sessionId": "s_acme_demo01"
+   },
+   {
+    "at": 1759376800000,
+    "kind": "pr",
+    "uid": "PR:4059",
+    "title": "chore: regenerate lock files - fix vulns",
+    "detail": "+812 \u2212640 \u00b7 9 files"
+   },
+   {
+    "at": 1757908000000,
+    "kind": "pr",
+    "uid": "PR:3959",
+    "title": "feat(checkout): add PlaceOrder span attributes",
+    "detail": "+120 \u221214 \u00b7 3 files"
+   }
+  ]
+ },
+ "cypher": [
+  "// person activity: PRs, posts, incidents, on-call weeks, decisions and agent findings that name them\nMATCH (p:Person {uid: $uid})\nCALL {\n  WITH p MATCH (p)-[:AUTHORED]->(pr:PR) RETURN 'pr' AS kind, pr.uid AS uid, pr.title AS title, pr.mergedAt AS at\n  UNION ALL\n  WITH p MATCH (f:Finding)-[:ABOUT|SUPPORTED_BY]->(p) RETURN 'finding' AS kind, f.uid AS uid, f.claim AS title, f.createdAt AS at\n}\nRETURN kind, uid, title, at\nORDER BY at DESC\nLIMIT $limit"
+ ]
+}

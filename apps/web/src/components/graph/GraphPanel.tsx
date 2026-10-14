@@ -30,6 +30,8 @@ export interface GraphPanelProps {
   onClearSelection?: () => void;
   onClearFocus?: () => void;
   onUid?: (uid: string) => void;
+  /** link target for Person nodes (their /people activity page) */
+  personHref?: (uid: string) => string;
 }
 
 const HIDDEN_PROPS = new Set(["embedding", "uid", "synthetic"]);
@@ -116,6 +118,16 @@ export function GraphPanel(p: GraphPanelProps) {
               ×
             </button>
           </div>
+          {p.selected.label === "Person" && p.personHref && (
+            <a
+              href={p.personHref(p.selected.id)}
+              target="_blank"
+              rel="noreferrer"
+              className="mx-2.5 mt-2 flex items-center justify-center rounded border border-accent/50 bg-accent/15 px-2 py-1 text-xs text-accent hover:bg-accent/25"
+            >
+              Open activity feed →
+            </a>
+          )}
           <dl className="max-h-48 overflow-auto px-2.5 py-1.5 text-2xs">
             {Object.entries(p.selected.props)
               .filter(([k]) => !HIDDEN_PROPS.has(k))

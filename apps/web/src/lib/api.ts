@@ -9,6 +9,8 @@ import type {
   HealthStatus,
   InvestigateRequest,
   MemoryInspectorData,
+  PersonActivity,
+  PersonSummary,
   Scenario,
   SessionSummary,
   Subgraph,
@@ -68,6 +70,9 @@ export const api = {
   overview: (tenant: Tenant) => getJson<Subgraph>(`/api/graph/overview?${q({ tenant })}`),
   neighborhood: (tenant: Tenant, uid: string, limit = 40) => getJson<Subgraph>(`/api/graph/neighborhood?${q({ tenant, uid, limit })}`),
   memory: (tenant: Tenant, sessionId?: string) => getJson<MemoryInspectorData>(`/api/memory?${q({ tenant, sessionId })}`),
+  people: (tenant: Tenant, persona?: boolean) =>
+    getJson<PersonSummary[]>(`/api/people?${q({ tenant, persona: persona === undefined ? undefined : String(persona) })}`),
+  personActivity: (tenant: Tenant, uid: string) => getJson<PersonActivity>(`/api/people/activity?${q({ tenant, uid })}`),
   closeIncident: (req: CloseIncidentRequest) =>
     getJson<CloseIncidentResult>("/api/incidents/close", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(req) }),
 };

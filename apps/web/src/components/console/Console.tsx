@@ -264,14 +264,21 @@ export function Console() {
     void expand(n.id);
   };
 
+  const peopleHref = useCallback((uid: string) => `/people?tenant=${tenant}&uid=${encodeURIComponent(uid)}${fixture ? "&fixture=1" : ""}`, [tenant, fixture]);
+
   const onUid = useCallback(
     (uid: string) => {
+      // A person pill opens their live activity page (new tab, so the run stays on screen).
+      if (uid.startsWith("Person:")) {
+        window.open(peopleHref(uid), "_blank", "noopener");
+        return;
+      }
       const n = graph.nodes.find((x) => x.id === uid);
       setSelected(n ?? { id: uid, label: (uid.split(":")[0] as GNode["label"]) ?? "Service", name: uid.split(":").slice(1).join(":"), props: {} });
       setFocus(new Set([uid]));
       void expand(uid);
     },
-    [graph.nodes, expand],
+    [graph.nodes, expand, peopleHref],
   );
 
   const onFocusPaths = (paths: GraphPath[], extra: string[]) => {
@@ -403,6 +410,9 @@ export function Console() {
             <Dot ok={health ? health.postgres.ok : healthErr ? false : null} /> Postgres
           </span>
           <Divider />
+          <Link href={`/people?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
+            People
+          </Link>
           <Link href={`/memory?tenant=${tenant}${fixture ? "&fixture=1" : ""}${sessionId ? `&session=${sessionId}` : ""}`} className="text-xs text-fg-2 hover:text-fg">
             Memory inspector →
           </Link>
@@ -530,6 +540,7 @@ export function Console() {
             onClearSelection={() => setSelected(null)}
             onClearFocus={() => setFocus(null)}
             onUid={onUid}
+            personHref={peopleHref}
           />
         </section>
 

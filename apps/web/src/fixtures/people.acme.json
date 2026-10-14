@@ -1,0 +1,137 @@
+[
+ {
+  "uid": "Person:dana-whitfield",
+  "name": "Dana Whitfield",
+  "persona": true,
+  "isBot": false,
+  "onCallNow": [
+   "Service:checkout",
+   "Service:payment"
+  ],
+  "counts": {
+   "prs": 0,
+   "posts": 14,
+   "incidents": 5,
+   "onCallWeeks": 22,
+   "decisions": 1,
+   "findings": 3
+  },
+  "role": "SRE",
+  "team": "Team:checkout-payments"
+ },
+ {
+  "uid": "Person:marcus-oyelaran",
+  "name": "Marcus Oyelaran",
+  "persona": true,
+  "isBot": false,
+  "onCallNow": [],
+  "counts": {
+   "prs": 0,
+   "posts": 9,
+   "incidents": 2,
+   "onCallWeeks": 0,
+   "decisions": 4,
+   "findings": 1
+  },
+  "role": "Engineering manager",
+  "team": "Team:checkout-payments"
+ },
+ {
+  "uid": "Person:ines-carvalho",
+  "name": "In\u00eas Carvalho",
+  "persona": true,
+  "isBot": false,
+  "onCallNow": [],
+  "counts": {
+   "prs": 0,
+   "posts": 21,
+   "incidents": 3,
+   "onCallWeeks": 0,
+   "decisions": 0,
+   "findings": 0
+  },
+  "role": "Support lead",
+  "team": "Team:storefront"
+ },
+ {
+  "uid": "Person:kenji-arai",
+  "name": "Kenji Arai",
+  "persona": true,
+  "isBot": false,
+  "onCallNow": [
+   "Service:kafka"
+  ],
+  "counts": {
+   "prs": 0,
+   "posts": 7,
+   "incidents": 4,
+   "onCallWeeks": 18,
+   "decisions": 0,
+   "findings": 2
+  },
+  "role": "SRE",
+  "team": "Team:platform"
+ },
+ {
+  "uid": "Person:piotr-kielkowicz",
+  "name": "Piotr Kie\u0142kowicz",
+  "persona": false,
+  "isBot": false,
+  "onCallNow": [],
+  "counts": {
+   "prs": 41,
+   "posts": 0,
+   "incidents": 0,
+   "onCallWeeks": 0,
+   "decisions": 0,
+   "findings": 4
+  },
+  "team": "Team:storefront"
+ },
+ {
+  "uid": "Person:juliano-costa",
+  "name": "Juliano Costa",
+  "persona": false,
+  "isBot": false,
+  "onCallNow": [],
+  "counts": {
+   "prs": 88,
+   "posts": 0,
+   "incidents": 0,
+   "onCallWeeks": 0,
+   "decisions": 0,
+   "findings": 2
+  },
+  "team": "Team:cart-catalog"
+ },
+ {
+  "uid": "Person:florian-bourgey",
+  "name": "Florian Bourgey",
+  "persona": false,
+  "isBot": false,
+  "onCallNow": [],
+  "counts": {
+   "prs": 23,
+   "posts": 0,
+   "incidents": 0,
+   "onCallWeeks": 0,
+   "decisions": 0,
+   "findings": 1
+  }
+ },
+ {
+  "uid": "Person:renovate-bot",
+  "name": "renovate[bot]",
+  "persona": false,
+  "isBot": true,
+  "onCallNow": [],
+  "counts": {
+   "prs": 212,
+   "posts": 0,
+   "incidents": 0,
+   "onCallWeeks": 0,
+   "decisions": 0,
+   "findings": 0
+  }
+ }
+]

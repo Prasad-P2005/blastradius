@@ -3,7 +3,7 @@
  * Fixtures are hand-written AgentEvent[] streams that follow the contract
  * exactly; they're loaded with dynamic import so they never ship in the main bundle.
  */
-import type { AgentEvent, InvestigationMode, MemoryInspectorData, Scenario, Subgraph } from "@blastradius/shared";
+import type { AgentEvent, PersonActivity, PersonSummary, InvestigationMode, MemoryInspectorData, Scenario, Subgraph } from "@blastradius/shared";
 
 export function fixtureEnabled(): boolean {
   if (typeof window === "undefined") return false;
@@ -66,4 +66,23 @@ export async function* replayFixture(events: AgentEvent[], opts: { instant?: boo
     prev = t;
     yield { ...ev, runId: `${ev.runId}-${opts.nonce}` };
   }
+}
+
+/** People fixture; timestamps are shifted so the newest item is "just now". */
+export async function loadFixturePeople(): Promise<{ people: PersonSummary[]; activity: (uid: string) => PersonActivity }> {
+  const people = (await import("../fixtures/people.acme.json")).default as unknown as PersonSummary[];
+  const act = (await import("../fixtures/people-activity.acme.json")).default as unknown as {
+    items: Record<string, PersonActivity["items"]>;
+    cypher: string[];
+  };
+  const newest = Math.max(...Object.values(act.items).flatMap((xs) => xs.map((x) => x.at)));
+  const shift = Date.now() - 60_000 - newest;
+  return {
+    people,
+    activity: (uid) => ({
+      person: people.find((p) => p.uid === uid) ?? people[0]!,
+      items: (act.items[uid] ?? []).map((x) => ({ ...x, at: x.at + shift })),
+      cypher: act.cypher,
+    }),
+  };
 }
