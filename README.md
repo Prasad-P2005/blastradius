@@ -157,12 +157,15 @@ cp .env.example .env              # defaults work as-is
 docker compose up -d              # FalkorDB on :6380, Postgres on :5434
 export ONNXRUNTIME_NODE_INSTALL_CUDA=skip   # optional: skips a large CUDA download on linux/x64
 pnpm install
+pnpm --filter @blastradius/mcp fetch-model   # MiniLM embedding model (~90 MB) into .cache/hf (skip if EMBEDDINGS=hash)
 pnpm db:migrate                   # Postgres tables
 pnpm graph:load                   # load data/*.json into FalkorDB (one graph per tenant)
 pnpm dev                          # http://localhost:3000
 ```
 
-With no API key, `AGENT_MODE=auto` runs **scripted mode**: the same tools in a fixed order, with claims templated from the rows. It's deterministic, and the UI shows a badge. The first `graph:load` downloads the MiniLM embedding model (~90 MB) into `.cache/hf`. Set `EMBEDDINGS=hash` to skip that and use the hashed fallback.
+With no API key, `AGENT_MODE=auto` runs **scripted mode**: the same tools in a fixed order, with claims templated from the rows. It's deterministic, and the UI shows a badge.
+
+**Embeddings.** `fetch-model` uses curl (with retries) to download `Xenova/all-MiniLM-L6-v2` into the transformers.js cache, because the library's own download is unreliable on slow links. The equivalent one-liner for the large file is `curl -fL --retry 5 -o .cache/hf/Xenova/all-MiniLM-L6-v2/onnx/model.onnx https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx`. If the model can't load, the graph package falls back to hashed embeddings and prints a warning. `EMBEDDINGS=hash` forces the fallback with no download at all. **Never mix the two backends in one graph:** their vectors live in different spaces, so similarity search returns nonsense. If you switch `EMBEDDINGS`, reload with `pnpm graph:load` (it resets the graphs), and serve with the same value you seeded with.
 
 **LLM mode:** set `ANTHROPIC_API_KEY` (or `LLM_PROVIDER=openai` + `OPENAI_API_KEY`) in `.env`. `AGENT_MODE=auto` then picks `llm`. Force either mode with `AGENT_MODE=llm|scripted`.
 

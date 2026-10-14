@@ -11,7 +11,8 @@
     "stdio": "tsx src/main.ts --stdio",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests --exclude '**/*.int.test.ts'",
-    "test:integration": "vitest run int.test"
+    "test:integration": "vitest run int.test",
+    "fetch-model": "sh scripts/fetch-model.sh"
   },
   "dependencies": {
     "@blastradius/graph": "workspace:*",

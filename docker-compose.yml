@@ -44,7 +44,11 @@ services:
   # (one graph per tenant, embeddings computed in-container).
   seed:
     profiles: ["app"]
-    build: { context: ., target: mcp }
+    build: &mcp-build
+      context: .
+      target: mcp
+      args:
+        FETCH_MODEL: ${FETCH_MODEL:-true}
     image: blastradius-mcp:local
     command: ["pnpm", "seed"]
     environment: &app-env
@@ -60,15 +64,13 @@ services:
       AGENT_TOOL_TRANSPORT: ${AGENT_TOOL_TRANSPORT:-direct}
       MCP_URL: http://mcp:3333/mcp
       MCP_ALLOW_WRITES: ${MCP_ALLOW_WRITES:-false}
-      # model = MiniLM via onnxruntime (downloads ~90 MB once into the hf-cache volume); hash = offline fallback
+      # model = MiniLM baked into the image at /opt/hf (build arg FETCH_MODEL=true); hash = offline fallback.
+      # Seed and serve share this value, so one graph never mixes backends.
       EMBEDDINGS: ${EMBEDDINGS:-model}
-      HF_CACHE_DIR: /app/.cache/hf
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       GITHUB_SANDBOX_REPO: ${GITHUB_SANDBOX_REPO:-}
       WEBHOOK_URL: ${WEBHOOK_URL:-}
       WEBHOOK_KIND: ${WEBHOOK_KIND:-slack}
-    volumes:
-      - hf-cache:/app/.cache/hf
     depends_on:
       falkordb: { condition: service_healthy }
       postgres: { condition: service_healthy }
@@ -78,14 +80,12 @@ services:
   mcp:
     profiles: ["app"]
     image: blastradius-mcp:local
-    build: { context: ., target: mcp }
+    build: *mcp-build
     environment:
       <<: *app-env
       MCP_PORT: "3333"
     ports:
       - "${MCP_PORT:-3333}:3333"
-    volumes:
-      - hf-cache:/app/.cache/hf
     depends_on:
       seed: { condition: service_completed_successfully }
     healthcheck:
@@ -98,18 +98,19 @@ services:
   web:
     profiles: ["app"]
     image: blastradius-web:local
-    build: { context: ., target: web }
+    build:
+      context: .
+      target: web
+      args:
+        FETCH_MODEL: ${FETCH_MODEL:-true}
     environment:
       <<: *app-env
       PORT: "3000"
     ports:
       - "${WEB_PORT:-3000}:3000"
-    volumes:
-      - hf-cache:/app/.cache/hf
     depends_on:
       seed: { condition: service_completed_successfully }
 
 volumes:
   falkordb-data:
   pg-data:
-  hf-cache:

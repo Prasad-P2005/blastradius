@@ -55,7 +55,9 @@ EMBEDDINGS=hash \
 pnpm graph:load
 ```
 
-**Use the same `EMBEDDINGS` backend for seeding and serving.** Vectors from the MiniLM model and from the hash fallback live in different spaces. If you seed with `model`, the services must also run with `model`. They then download the model (~90 MB) on first use into `HF_CACHE_DIR`, which on Render is lost on every deploy unless you attach a disk. `render.yaml` therefore defaults to `hash`.
+**Use the same `EMBEDDINGS` backend for seeding and serving, and never mix backends in one graph.** Vectors from the MiniLM model and from the hash fallback live in different spaces. A graph seeded with one and queried with the other returns meaningless similarity results. If you change the backend, reload with `pnpm graph:load` (it resets the tenant graphs).
+
+`render.yaml` sets `EMBEDDINGS=hash`, which is the simplest consistent choice: seed with `EMBEDDINGS=hash` as above. To use the model instead, seed with `EMBEDDINGS=model` (run `pnpm --filter @blastradius/mcp fetch-model` first) and change both services to `EMBEDDINGS=model`. The Docker image already contains the model at `/opt/hf` (see the `model` stage in the Dockerfile), so nothing downloads at runtime.
 
 ## 4. Render (web + MCP) from `render.yaml` (unverified)
 
@@ -101,7 +103,7 @@ The public endpoint runs with `MCP_ALLOW_WRITES=false`, so `record_finding` isn'
 docker compose --profile app up --build
 ```
 
-This starts FalkorDB and Postgres, runs the one-shot `seed` service (`pnpm seed` = `db:migrate` + `graph:load`), then starts `mcp` on `:3333` and `web` on `:3000`. Inside the network the containers use `falkordb:6379` and `postgres:5432`. Set `EMBEDDINGS=hash` in `.env` if the containers can't download the model.
+This starts FalkorDB and Postgres, runs the one-shot `seed` service (`pnpm seed` = `db:migrate` + `graph:load`), then starts `mcp` on `:3333` and `web` on `:3000`. Inside the network the containers use `falkordb:6379` and `postgres:5432`. The image build downloads the embedding model into `/opt/hf`. If that download fails on your network, build with `FETCH_MODEL=false EMBEDDINGS=hash docker compose --profile app up --build`. Seed and the services share one `EMBEDDINGS` value, so the graph never mixes backends.
 
 Build a single image:
 
