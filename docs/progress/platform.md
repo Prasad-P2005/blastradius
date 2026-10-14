@@ -22,8 +22,14 @@ Owner: platform workstream (`apps/mcp`, infra, CI, README + docs).
 - **Compose `seed` verified** with `docker compose --profile app build seed` + `BLASTRADIUS_GRAPH_NAMESPACE=compose docker compose --profile app run --rm --no-deps seed`: migrate + load inside the container with **model** embeddings (baked) succeeded. The running falkordb/postgres containers were untouched (still "Up 5 hours"). Test graphs and the `blastradius_ci` database were deleted afterwards.
 - **Not verified:** a full `docker compose --profile app up` (it would attach to the shared falkordb/postgres; skipped on purpose), and the `mcp` + `web` compose services as compose services (each image *was* run by hand on the same network, see above).
 
+- **Final docs pass** (re-read the graph/data/agents/web progress logs and code): ARCHITECTURE now uses the real memory Cypher from packages/graph, the real pipeline order (`run_started` before `startSession`) and the concurrency checks; DEMO uses real scenario ids (acme-checkout-5xx: 6-service blast radius, PR #4059, Piotr Kiełkowicz, INC-2026-037; acme-ask-valkey: ADR-001; acme-cart-errors + `add-prs`: #3988 → #4087). I verified recall and add-prs live in the throwaway namespace `democheck` (deleted afterwards). README track table and scripts table match the real commands and UI labels. `.env.example` gained `NEXT_PUBLIC_ENABLE_FIXTURES` and a commented-out `NEXT_DIST_DIR`.
+
 ## In progress
-- Final docs pass: re-reading the other workstreams' code + progress, updating README / ARCHITECTURE / DEMO, `.env.example`.
+- Nothing.
+
+## Open TODOs left in docs (for the team)
+- README: demo GIF/video, live URL, team names, each teammate's contribution, `docs/LEARN.md` (lead).
+- DEPLOY: FalkorDB Cloud / Neon / Render steps are **unverified** (no accounts used).
 
 ## Blockers
 - None.
