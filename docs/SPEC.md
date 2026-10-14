@@ -28,7 +28,8 @@ One FalkorDB graph per tenant: `blastradius_acme`, `blastradius_globex`. Every n
 | Service | R (curated) | slug | `name`, `slug`, `language`, `kind` (`service`\|`frontend`\|`datastore`\|`queue`\|`proxy`\|`external`\|`tool`), `repoPath` (e.g. `src/cart`), `description`, `tier` (1 = customer-facing, 2, 3), `synthetic:false` |
 | File | R | repo path | `path`, `service` (slug), `language` |
 | PR | R | number | `number`, `title`, `sha` (merge/squash commit), `mergedAt`, `additions`, `deletions`, `filesChanged`, `url` (github PR url), `isBot`, `authorName`, `synthetic:false` |
-| Person | R (+S for synthetic-only staff, avoid) | slug of name | `name`, `slug`, `isBot`, `prCount`, `firstSeenAt`, `lastSeenAt`, `synthetic`. **No emails, no logins scraped from private sources.** |
+| Person (real) | R | slug of name | `name`, `slug`, `isBot`, `prCount`, `firstSeenAt`, `lastSeenAt`, `persona:false`, `synthetic:false`. **No emails.** Real people only ever carry real facts (AUTHORED PRs, derived MEMBER_OF). |
+| Person (persona) | S | `persona-<slug>` | `name` (clearly fictional), `slug`, `role` (`SRE`, `Engineering manager`, `Support lead`, `Product manager`, `Backend engineer`…), `persona:true`, `synthetic:true`, `isBot:false`. Personas carry **everything fictional involving a person**: `POSTED` threads and tickets (they are the speakers inside `Thread.text`), `DECIDED_BY` on ADRs, `ON_CALL_FOR` rotation, `RESPONDED_BY` on incidents, and `MEMBER_OF` teams. |
 | Team | S | slug | `name`, `slug`, `slack` (channel name), `synthetic:true` |
 | Issue | S | key e.g. `ACME-142` | `key`, `title`, `body`, `status` (`open`\|`in_progress`\|`done`), `priority` (`P1`..`P4`), `createdAt`, `resolvedAt?`, `synthetic:true`, `embedding` |
 | Thread | S | id e.g. `t-0007` | `channel` (e.g. `#cart-team`), `title`, `text` (multi-message transcript, speakers by person name), `createdAt`, `synthetic:true`, `embedding` |
@@ -47,6 +48,7 @@ The relationship types and their directions are listed in `REL_TYPES` in the con
 - `MODIFIES {additions, deletions}`
 - `ON_CALL_FOR {weekStart: 'YYYY-MM-DD' (Monday), weekStartTs}`: **one edge per week**.
 - `MENTIONS`, `ABOUT`, `SUPPORTED_BY` and the rest have no properties, unless stated otherwise.
+- `POSTED`: (persona)-[:POSTED]->(Thread|Issue). Synthetic prose (thread text, ticket bodies, ADR text, incident summaries) **never quotes or attributes statements to a real person**. It may reference real PRs by number and title ("#1619 [Valkey] Replace Redis with Valkey").
 
 **Derived at load time:** `(pr:PR)-[:TOUCHES]->(s:Service)` for every `PR-MODIFIES->File-PART_OF->Service`. It is derived in Cypher inside `loadSnapshot` and `ingestDelta`, not written by ingest.
 
@@ -135,6 +137,10 @@ getFindings(tenant, sessionId: string): Promise<Finding[]>
 closeIncident(req: CloseIncidentRequest): Promise<CloseIncidentResult>
 listGraphSessions(tenant, limit?: number): Promise<SessionSummary[]>
 
+// people (personas + real authors)
+listPeople(tenant, opts?: { persona?: boolean }): Promise<PersonSummary[]>
+personActivity(tenant, uid: string, opts?: { limit?: number }): Promise<PersonActivity>  // PRs, posts, incidents, on-call weeks, decisions, + findings from agent sessions that name them
+
 // UI reads (all ids are uids)
 overview(tenant): Promise<Subgraph>                  // all Services + DEPENDS_ON + Teams/OWNS
 neighborhood(tenant, uid: string, opts?: { limit?: number }): Promise<Subgraph>
@@ -166,8 +172,8 @@ Inputs are listed in `ToolInputSchemas`. Every row is plain JSON. Node reference
 | `blast_radius` | variable-length `DEPENDS_ON*1..maxHops` + `algo.betweenness` | `service, name, hops, betweenness, tier, team` sorted by betweenness desc, then hops | one `DEPENDS_ON` path per affected service |
 | `critical_services` | `algo.betweenness` on Service/DEPENDS_ON | `service, name, betweenness, dependents, dependencies` | — |
 | `suspect_changes` | time window from `newestPrAt`, `TOUCHES` + `DEPENDS_ON*0..maxHops` | `pr, number, title, mergedAt, author, isBot, service, hops, files, additions, deletions, url` newest first, humans first unless includeBots | `Person-AUTHORED->PR-TOUCHES->Service(<-DEPENDS_ON-…alert service)` |
-| `who_knows` | `algo.pageRank` over Person/PR authorship. Score = pageRank × activity on the service; bots excluded unless `includeBots` (then ×0.1) | `person, name, score, prs, team, onCall, lastActiveAt` | `Person-AUTHORED->PR-TOUCHES->Service` (best PR) |
-| `on_call` | `ON_CALL_FOR {weekStart}` ≤ `at`, latest | `person, name, weekStart, team, service` | `Person-ON_CALL_FOR->Service` |
+| `who_knows` | real authors only (`persona=false`); `algo.pageRank` over Person/PR authorship. Score = pageRank × activity on the service; bots excluded unless `includeBots` (then ×0.1) | `person, name, score, prs, team, onCall, lastActiveAt` | `Person-AUTHORED->PR-TOUCHES->Service` (best PR) |
+| `on_call` | `ON_CALL_FOR {weekStart}` ≤ `at`, latest; on-call people are **personas** (role SRE etc.) | `person, name, weekStart, team, service` | `Person-ON_CALL_FOR->Service` |
 | `service_context` | 1-hop expansion | one row: `service, team, owners[], dependsOn[], dependents[], runbooks[], docs[], recentIncidents[], decisions[]` | the 1-hop edges |
 | `past_incidents` | `AFFECTED` (+ `DEPENDS_ON` neighbours) → `CAUSED_BY`, `RESOLVED_BY` | `incident, title, severity, startedAt, service, causedBy, runbook, runbookSteps[], responders[], synthetic, sessionId` | `Incident-AFFECTED->Service`, `Incident-CAUSED_BY->PR`, `Incident-RESOLVED_BY->Runbook` |
 | `similar_incidents` | **vector index** on Incident, then expansion **in the same query** | `incident, title, similarity (converted), distance, service, causedBy, runbook, responders[]` | `Incident-CAUSED_BY->PR`, `-RESOLVED_BY->Runbook` |
@@ -264,8 +270,10 @@ All actions are written to the `actions` table and emitted as `action` events.
 | GET | `/api/graph/neighborhood` | `?tenant=&uid=&limit=` | `Subgraph` |
 | GET | `/api/actions` | `?tenant=&sessionId=` | `ActionRecord[]` |
 | GET | `/api/memory` | `?tenant=&sessionId=` | `MemoryInspectorData` |
+| GET | `/api/people` | `?tenant=&persona=` | `PersonSummary[]` |
+| GET | `/api/people/activity` | `?tenant=&uid=` | `PersonActivity` |
 
-Pages: `/` (console), `/memory` (Memory inspector). Errors return `{ error: string }` with a 4xx or 5xx status. When FalkorDB is down, `/api/health` shows `falkordb.ok=false` and the UI shows a red banner.
+Pages: `/` (console), `/memory` (Memory inspector), `/people` (personas and real authors, each with a live activity feed). Errors return `{ error: string }` with a 4xx or 5xx status. When FalkorDB is down, `/api/health` shows `falkordb.ok=false` and the UI shows a red banner.
 
 ---
 

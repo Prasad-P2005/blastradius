@@ -109,6 +109,7 @@ export const REL_TYPES = [
   "SUPPORTED_BY", //  (Finding)-[:SUPPORTED_BY]->(any domain node)         the evidence behind a claim
   "HANDED_TO", //     (Finding)-[:HANDED_TO]->(Agent)                      the ONLY way agents hand off work
   "INVESTIGATES", //  (Session)-[:INVESTIGATES]->(Alert|Service|Incident)
+  "POSTED", //        (Person {persona:true})-[:POSTED]->(Thread|Issue)       a fictional persona wrote this chat thread / filed this ticket
 ] as const;
 export type RelType = (typeof REL_TYPES)[number];
 export const RelTypeSchema = z.enum(REL_TYPES);
@@ -803,4 +804,51 @@ export interface HealthStatus {
   model?: string;
   embeddings?: "model" | "hash";
   transport?: "direct" | "mcp";
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * People and personas.
+ *
+ * Real git authors (Person.persona=false) only ever carry REAL facts:
+ * AUTHORED PRs (and derived team membership). Everything fictional that
+ * involves a person (chat messages, tickets, ADR sign-off, on-call
+ * rotation, incident response) is attached to a fictional PERSONA:
+ * Person {persona:true, synthetic:true, role}. We never put invented words
+ * in a real contributor's mouth.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export interface PersonSummary {
+  uid: string;
+  name: string;
+  /** true = fictional persona; false = real public git author */
+  persona: boolean;
+  /** persona role, e.g. "SRE", "Engineering manager", "Support lead" */
+  role?: string;
+  isBot: boolean;
+  team?: string; // Team uid
+  /** services this person is on call for in the current week */
+  onCallNow: string[];
+  counts: { prs: number; posts: number; incidents: number; onCallWeeks: number; decisions: number; findings: number };
+}
+
+export type PersonActivityKind = "pr" | "thread" | "issue" | "incident" | "on_call" | "decision" | "finding" | "action";
+
+export interface PersonActivityItem {
+  /** epoch ms */
+  at: number;
+  kind: PersonActivityKind;
+  /** uid of the PR / Thread / Issue / Incident / Service (on_call) / Decision / Finding */
+  uid: string;
+  title: string;
+  detail?: string;
+  /** set for agent activity (findings that name this person) */
+  sessionId?: string;
+}
+
+/** GET /api/people/activity → packages/graph personActivity(tenant, uid) */
+export interface PersonActivity {
+  person: PersonSummary;
+  /** newest first */
+  items: PersonActivityItem[];
+  cypher: string[];
 }
