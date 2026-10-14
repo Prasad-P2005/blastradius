@@ -1,0 +1,20 @@
+{
+  "name": "@blastradius/graph",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.int.config.ts"
+  },
+  "dependencies": {
+    "@blastradius/shared": "workspace:*",
+    "@huggingface/transformers": "^4.3.1",
+    "falkordb": "^6.8.0",
+    "zod": "^4.1.12"
+  }
+}
