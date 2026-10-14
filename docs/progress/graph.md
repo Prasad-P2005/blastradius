@@ -4,8 +4,13 @@
 - M1: `packages/graph` package with the full SPEC §3 public API exported from `src/index.ts` (typechecks).
   connection, convert, embed, schema are real; tools/memory/reads/load are stubs that throw `not implemented`.
 
+- M2: all 16 tools, loadSnapshot/ingestDelta/resetGraph, memory, UI reads implemented. `scripts/try-tools.ts`
+  loads `test/fixture.ts` into `itest_blastradius_acme` and runs every tool against live FalkorDB (works; output being checked).
+- Real embedding model (Xenova/all-MiniLM-L6-v2) loads; the in-library download got "terminated", so model.onnx was fetched
+  with curl into `.cache/hf/Xenova/all-MiniLM-L6-v2/onnx/model.onnx`.
+
 ## In progress
-- Tools, memory, reads, load + fixture integration test.
+- Checking every tool's output on the fixture; integration test; unit tests.
 
 ## Next
 - docs/CYPHER.md with real output.
