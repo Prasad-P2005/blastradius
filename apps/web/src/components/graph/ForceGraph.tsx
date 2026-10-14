@@ -9,6 +9,8 @@
  */
 import ForceGraph2D, { type ForceGraphMethods, type LinkObject, type NodeObject } from "react-force-graph-2d";
 import { useEffect, useMemo, useRef, useState } from "react";
+// @ts-expect-error d3-force-3d ships no types; we only use forceX/forceY.
+import { forceX, forceY } from "d3-force-3d";
 import type { GEdge, GNode } from "@blastradius/shared";
 import { labelColor } from "@/lib/format";
 
@@ -114,6 +116,10 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
     charge?.strength?.(compact ? -90 : -160);
     const link = fg.d3Force("link") as unknown as { distance?: (v: number) => void } | undefined;
     link?.distance?.(compact ? 30 : 46);
+    // Weak gravity so disconnected pieces (a Thread → Person path) stay near the
+    // main component instead of drifting off and shrinking zoom-to-fit.
+    fg.d3Force("x", forceX(0).strength(0.06));
+    fg.d3Force("y", forceY(0).strength(0.06));
   }, [compact]);
 
   // Fit once the layout settles after the data/focus changes (and once early, so it never looks empty).
@@ -122,7 +128,7 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
     const fg = fgRef.current;
     if (!fg) return;
     if (focus && focus.size) fg.zoomToFit(600, 110, (n: N) => focus.has(n.id));
-    else fg.zoomToFit(600, 50);
+    else fg.zoomToFit(600, 70);
   };
   useEffect(() => {
     pendingFit.current = true;
@@ -258,7 +264,7 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
           }
 
           // labels: services/teams always (when not too zoomed out), others when highlighted/hovered
-          const important = g.label === "Service" || g.label === "Team" || g.label === "Session";
+          const important = g.label === "Service" || g.label === "Team" || g.label === "Session" || (compact === true && (g.label === "Agent" || g.label === "Episode"));
           const show = hoverNode === n.id || selected === n.id || (spotlight?.has(n.id) ?? false) || (important && scale > 0.7) || scale > 2.2;
           if (show) {
             const fs = Math.max(9, 11.5 / Math.sqrt(scale)) / scale * Math.min(scale, 1.6);

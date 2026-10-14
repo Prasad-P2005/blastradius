@@ -63,6 +63,9 @@ importers:
       '@huggingface/transformers':
         specifier: ^4.3.1
         version: 4.3.1(@types/node@22.20.5)
+      d3-force-3d:
+        specifier: 3.0.6
+        version: 3.0.6
       drizzle-orm:
         specifier: ^0.45.0
         version: 0.45.4(@opentelemetry/api@1.9.0)(postgres@3.4.9)
