@@ -135,7 +135,7 @@ export function causeClaim(service: string, rows: Row[], sinceDays = 30): string
   if (!top) return `No PRs touched ${svc} or its dependencies in the ${sinceDays} days before the newest PR in the graph.`;
   const number = str(top.number) ?? keyOf(str(top.pr) ?? "?");
   const title = str(top.title) ?? "untitled";
-  const author = cellName(top.author) ?? str(top.authorName) ?? "unknown author";
+  const author = str(top.authorName) ?? cellName(top.author) ?? "unknown author";
   const when = isoDate(top.mergedAt);
   const touched = cellName(top.service) ?? svc;
   const hops = num(top.hops);
@@ -162,7 +162,8 @@ export function precedentClaim(service: string, past: Row[], similar: Row[] = []
   let s = `Last time: ${key}${title ? ` "${title}"` : ""}${sev ? ` (${sev})` : ""}${fromVector}`;
   s += cause ? ` was caused by ${/^\d+$/.test(cause) ? `PR #${cause}` : cause}` : " hit a similar path";
   s += runbook ? ` and resolved with runbook "${runbook}".` : ".";
-  const more = past.length + similar.length - 1;
+  const uids = new Set([...past, ...similar].map((r) => str(r.incident)).filter(Boolean));
+  const more = uids.size - 1;
   if (more > 0) s += ` ${plural(more, "more related incident")} on record.`;
   return s;
 }

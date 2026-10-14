@@ -115,7 +115,7 @@ describe("scripted claim templates", () => {
   });
   it("cause prefers humans", () => {
     expect(causeClaim("Service:checkout", CANNED.suspect_changes!({}).rows)).toBe(
-      'The most likely cause is PR #1999 "Refactor payment retries" by jane-doe, merged 2024-09-21, touching payment (1 hop from checkout).',
+      'The most likely cause is PR #1999 "Refactor payment retries" by Jane Doe, merged 2024-09-21, touching payment (1 hop from checkout).',
     );
   });
   it("precedent", () => {
@@ -304,5 +304,20 @@ describe("actions content + MCP parsing", () => {
     expect(parseMcpToolResult("on_call", { structuredContent: r }).rows).toEqual([{ a: 1 }]);
     expect(parseMcpToolResult("on_call", { content: [{ type: "text", text: JSON.stringify(r) }] }).cypher).toBe(r.cypher);
     expect(() => parseMcpToolResult("on_call", { isError: true, content: [{ type: "text", text: "boom" }] })).toThrow("boom");
+  });
+});
+
+describe("actionEnv", () => {
+  it("ignores empty values and leftover # comments", async () => {
+    const { actionEnv } = await import("./actions.ts");
+    expect(actionEnv({ WEBHOOK_URL: "# Slack or Discord incoming webhook", GITHUB_SANDBOX_REPO: "# owner/repo", GITHUB_TOKEN: "" })).toEqual({
+      webhookKind: "slack",
+    });
+    expect(actionEnv({ WEBHOOK_URL: "https://hooks.slack.com/x", GITHUB_SANDBOX_REPO: "me/sandbox", GITHUB_TOKEN: "t", WEBHOOK_KIND: "discord" })).toEqual({
+      githubToken: "t",
+      githubRepo: "me/sandbox",
+      webhookUrl: "https://hooks.slack.com/x",
+      webhookKind: "discord",
+    });
   });
 });

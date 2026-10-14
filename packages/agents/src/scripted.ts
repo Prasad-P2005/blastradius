@@ -195,7 +195,8 @@ export async function scriptedExpert(scope: AgentScope): Promise<string> {
 
 /* ── scribe ─────────────────────────────────────────────────────────────── */
 
-const SUMMARY_ORDER = ["impact", "cause", "expert", "precedent", "risk"] as const;
+/** The four questions, in reading order: what breaks, cause, who fixes, what worked last time. */
+const SUMMARY_ORDER = ["impact", "cause", "expert", "precedent"] as const;
 
 export async function scriptedScribe(scope: AgentScope, sessionFindings: Finding[]): Promise<string> {
   const handoffs = await scope.callTool("read_handoffs", {});

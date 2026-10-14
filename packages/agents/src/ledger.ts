@@ -12,7 +12,7 @@
  *
  * Also home of `modelView()`: the capped projection of a result the model sees.
  */
-import { MODEL_ROW_CAP, parseUid, type GraphToolResult, type Json, type Row, type ToolName } from "@blastradius/shared";
+import { MEMORY_LABELS, MODEL_ROW_CAP, parseUid, type GraphToolResult, type Json, type Row, type ToolName } from "@blastradius/shared";
 
 export interface LedgerEntry {
   callId: string;
@@ -107,8 +107,13 @@ export function evidenceFromEntries(entries: readonly LedgerEntry[], max = 25): 
   for (const e of entries) {
     for (const r of e.result.rows) collectUids(r, out, 0);
   }
-  return dedupe(out).filter(isUid).slice(0, max);
+  return dedupe(out)
+    .filter((u) => isUid(u) && !MEMORY_LABEL_SET.has(parseUid(u)!.label))
+    .slice(0, max);
 }
+
+/** Evidence should be domain nodes, not agent memory (Agent/Finding/Episode/Session). */
+const MEMORY_LABEL_SET = new Set<string>(MEMORY_LABELS);
 
 function collectUids(v: Json | undefined, out: string[], depth: number): void {
   if (v == null || depth > 3) return;

@@ -23,12 +23,20 @@ export interface ActionEnv {
   webhookKind: "slack" | "discord";
 }
 
+/** An env value, or undefined when empty or a leftover `# comment` (some .env parsers keep those). */
+function envVal(v: string | undefined): string | undefined {
+  const t = v?.trim();
+  return t && !t.startsWith("#") ? t : undefined;
+}
+
 export function actionEnv(env: NodeJS.ProcessEnv = process.env): ActionEnv {
-  const kind = env.WEBHOOK_KIND?.trim().toLowerCase() === "discord" ? "discord" : "slack";
+  const kind = envVal(env.WEBHOOK_KIND)?.toLowerCase() === "discord" ? "discord" : "slack";
+  const repo = envVal(env.GITHUB_SANDBOX_REPO);
+  const url = envVal(env.WEBHOOK_URL);
   return {
-    githubToken: env.GITHUB_TOKEN?.trim() || undefined,
-    githubRepo: env.GITHUB_SANDBOX_REPO?.trim() || undefined,
-    webhookUrl: env.WEBHOOK_URL?.trim() || undefined,
+    githubToken: envVal(env.GITHUB_TOKEN),
+    githubRepo: repo && /^[\w.-]+\/[\w.-]+$/.test(repo) ? repo : undefined,
+    webhookUrl: url && /^https?:\/\//.test(url) ? url : undefined,
     webhookKind: kind,
   };
 }

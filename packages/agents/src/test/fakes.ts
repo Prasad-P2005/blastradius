@@ -54,7 +54,7 @@ export const CANNED: Partial<Record<ToolName, (input: Record<string, unknown>) =
       "suspect_changes",
       [
         { pr: "PR:2001", number: 2001, title: "bump deps", mergedAt: 1727000000000, author: "Person:renovate-bot", isBot: true, service: "Service:checkout", hops: 0 },
-        { pr: "PR:1999", number: 1999, title: "Refactor payment retries", mergedAt: 1726900000000, author: "Person:jane-doe", isBot: false, service: "Service:payment", hops: 1 },
+        { pr: "PR:1999", number: 1999, title: "Refactor payment retries", mergedAt: 1726900000000, author: "Person:jane-doe", authorName: "Jane Doe", isBot: false, service: "Service:payment", hops: 1 },
       ],
       { extraQueries: [{ cypher: "// newest PR\nMATCH (p:PR) RETURN max(p.mergedAt)", params: {} }] },
     ),
