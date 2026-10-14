@@ -53,12 +53,9 @@ const agentField = AgentNameSchema.optional().describe("Which agent you are acti
  */
 export function toolInputShape(name: ToolName): z.ZodRawShape {
   const base = ToolInputSchemas[name].shape as z.ZodRawShape;
-  const shape: z.ZodRawShape = { tenant: tenantField, ...base };
-  if (isMemoryTool(name)) {
-    shape.sessionId = sessionIdField;
-    shape.agent = agentField;
-  }
-  return shape;
+  return isMemoryTool(name)
+    ? { tenant: tenantField, ...base, sessionId: sessionIdField, agent: agentField }
+    : { tenant: tenantField, ...base };
 }
 
 /** Which tools the server exposes for a given write mode. */
