@@ -102,6 +102,11 @@ export const REL_DIRECTIONS: Record<RelType, { from: string[]; to: string[]; pro
   SUPPORTED_BY: { from: ["Finding"], to: ["any domain node"], note: "the evidence behind a claim" },
   HANDED_TO: { from: ["Finding"], to: ["Agent"], note: "the only way agents hand off work" },
   INVESTIGATES: { from: ["Session"], to: ["Alert", "Service", "Incident"] },
+  POSTED: {
+    from: ["Person (persona: true)"],
+    to: ["Thread", "Issue"],
+    note: "a fictional persona wrote this chat thread / filed this ticket",
+  },
 };
 
 /** Indexes that `ensureSchema(tenant)` creates (SPEC §1). Live indexes are added by the server if FalkorDB answers. */
