@@ -1,0 +1,24 @@
+{
+  "name": "@blastradius/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --exclude '**/*.int.test.ts' --passWithNoTests",
+    "test:integration": "vitest run src/db.int.test.ts",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts"
+  },
+  "dependencies": {
+    "@blastradius/shared": "workspace:*",
+    "drizzle-orm": "^0.45.0",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.4"
+  }
+}
