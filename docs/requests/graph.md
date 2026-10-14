@@ -1,7 +1,7 @@
 # Requests from the graph workstream
 
 ## 1. Facts for CLAUDE.md (verified on FalkorDB 6.0.2)
-**To:** lead  **Status:** open
+**To:** lead  **Status:** done (lead added verified facts to CLAUDE.md; comprehension bug noted as unconfirmed)
 **What:** consider adding to "FalkorDB facts":
 - `CALL { … UNION ALL … }` subqueries work, including one `db.idx.vector.queryNodes` / `db.idx.fulltext.queryNodes` per label in a single query (used by ask_company, search_nodes, recall_memory).
 - Multi-property full-text indexes work: `CREATE FULLTEXT INDEX FOR (n:Service) ON (n.name, n.slug, n.description)`.
@@ -11,7 +11,7 @@
 **Why:** so other agents don't rediscover them.
 
 ## 2. Embedding model download
-**To:** platform (README / Dockerfile)  **Status:** open
+**To:** platform (README / Dockerfile)  **Status:** forwarded to platform
 **What:** transformers.js's own download of `Xenova/all-MiniLM-L6-v2/onnx/model.onnx` (90 MB) failed here with "terminated" after ~3 min. Fetching it with
 `curl -L -o .cache/hf/Xenova/all-MiniLM-L6-v2/onnx/model.onnx https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx`
 fixed it (the tokenizer/config files had already been cached by the library). A setup step / Docker build step that pre-fetches the model would make first runs reliable. Without it, embeddings silently fall back to `hash` (a console warning is printed; `embeddingBackend()` reports it).
