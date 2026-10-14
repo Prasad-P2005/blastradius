@@ -7,19 +7,25 @@ import { FULLTEXT_INDEXES } from "../schema.ts";
 import { defineTool, fulltextQuery, hopInt, labelOfUid, makeResult, num, str, toolQuery } from "./common.ts";
 
 export const SERVICE_CONTEXT_CYPHER = `// Context card for $service: everything one hop away, in one row.
-// Pattern comprehensions collect each neighbour kind without multiplying rows.
+// Edge properties (DEPENDS_ON.protocol) are collected with OPTIONAL MATCH first:
+// on FalkorDB 6.0.2 a pattern comprehension that binds a relationship variable
+// makes LATER comprehensions in the same RETURN come back empty (verified).
 MATCH (s:Service {uid: $service})
 OPTIONAL MATCH (team:Team)-[:OWNS]->(s)
 WITH s, collect(team)[0] AS team
+OPTIONAL MATCH (s)-[d1:DEPENDS_ON]->(callee:Service)
+WITH s, team, collect({uid: callee.uid, name: callee.name, protocol: d1.protocol}) AS dependsOn
+OPTIONAL MATCH (caller:Service)-[d2:DEPENDS_ON]->(s)
+WITH s, team, dependsOn, collect({uid: caller.uid, name: caller.name, protocol: d2.protocol}) AS dependents
+// pattern comprehensions collect each neighbour kind without multiplying rows
 RETURN s.uid AS service, s.name AS name, s.kind AS kind, s.tier AS tier, s.language AS language,
        s.description AS description, team.uid AS team, team.name AS teamName,
        [(team)<-[:MEMBER_OF]-(m:Person) WHERE NOT coalesce(m.isBot, false) | {uid: m.uid, name: m.name}] AS owners,
-       [(s)-[d:DEPENDS_ON]->(x:Service) | {uid: x.uid, name: x.name, protocol: d.protocol}] AS dependsOn,
-       [(x:Service)-[d:DEPENDS_ON]->(s) | {uid: x.uid, name: x.name, protocol: d.protocol}] AS dependents,
-       [(r:Runbook)-[:APPLIES_TO]->(s) | {uid: r.uid, title: r.title, steps: r.steps}] AS runbooks,
-       [(d:Doc)-[:ABOUT]->(s) | {uid: d.uid, title: d.title, kind: d.kind}] AS docs,
+       dependsOn, dependents,
+       [(rb:Runbook)-[:APPLIES_TO]->(s) | {uid: rb.uid, title: rb.title, steps: rb.steps}] AS runbooks,
+       [(doc:Doc)-[:ABOUT]->(s) | {uid: doc.uid, title: doc.title, kind: doc.kind}] AS docs,
        [(i:Incident)-[:AFFECTED]->(s) | {uid: i.uid, title: i.title, severity: i.severity, startedAt: i.startedAt}] AS recentIncidents,
-       [(d:Decision)-[:ABOUT]->(s) | {uid: d.uid, title: d.title, status: d.status}] AS decisions,
+       [(dec:Decision)-[:ABOUT]->(s) | {uid: dec.uid, title: dec.title, status: dec.status}] AS decisions,
        // evidence: the 1-hop edges themselves
        [p = (s)-[:DEPENDS_ON]-(:Service) | p] + [p = (s)<-[:OWNS]-(:Team) | p] +
        [p = (s)<-[:APPLIES_TO]-(:Runbook) | p] + [p = (s)<-[:ABOUT]-(:Doc) | p] +
@@ -30,6 +36,12 @@ export const serviceContext = defineTool("service_context", async (ctx, args) =>
   const params = { service };
   const out = await toolQuery(ctx, SERVICE_CONTEXT_CYPHER, params, { pathColumns: ["paths"] });
   const row = out.rows[0];
+  if (row) {
+    // OPTIONAL MATCH misses leave {uid: null, …} entries: drop them.
+    for (const k of ["dependsOn", "dependents"]) {
+      if (Array.isArray(row[k])) row[k] = (row[k] as Json[]).filter((x) => x !== null && typeof x === "object" && !Array.isArray(x) && x.uid !== null);
+    }
+  }
   if (row && Array.isArray(row.recentIncidents)) {
     // newest first, at most 5 (pattern comprehensions cannot sort)
     row.recentIncidents = (row.recentIncidents as { startedAt?: Json }[])

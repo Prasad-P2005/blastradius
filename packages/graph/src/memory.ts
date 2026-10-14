@@ -359,7 +359,13 @@ export async function recallMemory(
     const u = str(r.uid);
     const prev = byUid.get(u);
     if (!prev) byUid.set(u, { row: r, path: perRowPaths[i] });
-    else if (prev.row.distance === null && r.distance !== null && r.distance !== undefined) prev.row.distance = r.distance;
+    else {
+      if (prev.row.distance === null && r.distance !== null && r.distance !== undefined) prev.row.distance = r.distance;
+      // prefer the path anchored at the investigated service (the "why it is relevant here")
+      const p = perRowPaths[i];
+      const anchored = (x?: GraphPath) => Boolean(service && x?.nodes.some((n) => n.id === service));
+      if (p && anchored(p) && !anchored(prev.path)) prev.path = p;
+    }
   });
   const kept = [...byUid.values()].slice(0, args.limit);
 
