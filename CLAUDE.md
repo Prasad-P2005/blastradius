@@ -83,6 +83,10 @@ Checked by the lead in Phase 0. Re-check anything else before building on it.
 - Vector: `CREATE VECTOR INDEX FOR (t:T) ON (t.embedding) OPTIONS {dimension:384, similarityFunction:'cosine'}` works. The `queryNodes` score is a cosine **distance** (identical vectors give ≈0).
 - `GRAPH.RO_QUERY` rejects writes. Use the client's read-only query for read tools.
 - The server default query **TIMEOUT is 1000 ms**. Keep tool queries bounded (`LIMIT`, hop caps). Pass a per-query timeout if one must run longer (e.g. bulk loads).
+- `algo.pageRank` follows edge direction. On `(Person)-[:AUTHORED]->(PR)` every Person gets the **same** score (lead re-verified), because rank only comes from incoming edges. `who_knows` therefore runs PageRank over the whole graph and combines it with activity on the service (see `packages/graph/src/tools/people.ts`).
+- Vector search across several labels works in **one** query with `CALL { … UNION ALL … }` subqueries (graph workstream verified this).
+- Reported by graph but **not** reproduced by the lead in a minimal case: a pattern comprehension naming a relationship variable (`[(s)<-[e:A]-(x) | e.w]`) emptied later comprehensions in the same RETURN in one complex query. If a comprehension comes back unexpectedly empty, suspect this.
+- Embedding model: transformers.js's own download of `model.onnx` failed on this network. The model was fetched with curl into `.cache/hf/Xenova/all-MiniLM-L6-v2/onnx/`. **Never mix `model` and `hash` embeddings in one graph.** Reload with `--reset` if the backend changes.
 
 ---
 
