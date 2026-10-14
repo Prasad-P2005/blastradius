@@ -33,7 +33,7 @@ Submission to **Graph Hacks: Context for AI Agents** (FalkorDB × WeMakeDevs, Oc
 | | One graph per tenant | `blastradius_acme`, `blastradius_globex` | Tenant selector in the top bar; `redis-cli -p 6380 GRAPH.LIST` |
 | | Concurrency | 10 concurrent investigations (two sharing a session); checks episode chains, tenant isolation, event order | `pnpm concurrency` |
 | **03 Company Brain** | Tickets, threads, ADRs, docs with the code | `Issue`, `Thread`, `Decision`, `Doc` nodes linked to `Service`, `PR`, `Person` | Graph view; [data model](#graph-data-model) |
-| | Who owns or knows X | `who_knows` (topic or service), `service_context` | Ask mode |
+| | Who owns or knows X | `who_knows` (real authors only, topic or service), `service_context`; `/people` page with each persona's and author's live activity (TODO: page not built yet) | Ask mode; `/people` |
 | | Decision tracing | `Doc <-DOCUMENTED_IN- Decision -JUSTIFIES-> PR <-CAUSED_BY- Incident` (`decision_trace`) | Ask mode, Why? drawer |
 | | Ask the company with sources | `ask_company`: vector search across text labels, then expansion to owners, PRs, decisions | Ask mode in the console |
 | | Incremental re-ingest | `ingestDelta` MERGEs real PRs merged after the snapshot (`data/deltas/`), with no reload; TOUCHES are derived for them | `pnpm --filter @blastradius/ingest add-prs --tenant acme` (the acme cart suspect changes from PR #3988 to #4087) |
@@ -72,7 +72,8 @@ One FalkorDB graph per tenant. Every node has a `uid` (`Label:key`, e.g. `Servic
 | `Service` | R (curated) | `name`, `language`, `kind`, `tier`, `repoPath` |
 | `File` | R | `path`, `service` |
 | `PR` | R | `number`, `title`, `mergedAt`, `additions`, `deletions`, `isBot`, `url` |
-| `Person` | R | `name`, `isBot`, `prCount` (keyed by slugified name; no emails) |
+| `Person` (real) | R | `name`, `isBot`, `prCount`, `persona: false`; keyed by slugified name, no emails. Carries **only real facts**: the PRs they authored. |
+| `Person` (persona) | S | `name` (clearly fictional), `role` (SRE, Engineering manager…), `persona: true`; uid `Person:persona-<slug>`. Carries everything fictional involving a person: chat, tickets, ADR sign-off, on-call, incident response. |
 | `Team` | S | `name`, `slack` |
 | `Issue` | S | `key`, `title`, `status`, `priority`, `embedding` |
 | `Thread` | S | `channel`, `title`, `text`, `embedding` |
@@ -95,17 +96,19 @@ flowchart LR
   Service -- DEPENDS_ON --> Service
   Team -- OWNS --> Service
   Person -- MEMBER_OF --> Team
-  Person -- ON_CALL_FOR --> Service
   Decision -- JUSTIFIES --> PR
   Decision -- DOCUMENTED_IN --> Doc
-  Decision -- DECIDED_BY --> Person
+  Decision -- DECIDED_BY --> Persona
   Decision -- ABOUT --> Service
   Issue -- ABOUT --> Service
   Thread -- MENTIONS --> Service
+  Persona["Person (persona)"] -- POSTED --> Thread
+  Persona -- POSTED --> Issue
+  Persona -- ON_CALL_FOR --> Service
   Incident -- AFFECTED --> Service
   Incident -- CAUSED_BY --> PR
   Incident -- RESOLVED_BY --> Runbook
-  Incident -- RESPONDED_BY --> Person
+  Incident -- RESPONDED_BY --> Persona
   Incident -- TRIGGERED_BY --> Alert
   Alert -- FIRED_ON --> Service
   Runbook -- APPLIES_TO --> Service
@@ -223,10 +226,18 @@ Try asking: *"Using blastradius on tenant acme, what breaks if checkout fails, a
 
 | Tenant | Source | License | Real | Synthetic |
 |---|---|---|---|---|
-| `acme` | [open-telemetry/opentelemetry-demo](https://github.com/open-telemetry/opentelemetry-demo) | Apache-2.0 | services, files, PRs, authors (from public git history) | teams, on-call, incidents, runbooks, tickets, threads, ADRs, docs |
+| `acme` | [open-telemetry/opentelemetry-demo](https://github.com/open-telemetry/opentelemetry-demo) | Apache-2.0 | services, files, PRs, PR authors and what they changed (from public git history) | personas, teams, on-call, incidents, runbooks, tickets, threads, ADR text, docs |
 | `globex` | [GoogleCloudPlatform/microservices-demo](https://github.com/GoogleCloudPlatform/microservices-demo) | Apache-2.0 | same | same |
 
 People are keyed by slugified name only, and the dataset contains no email addresses. Synthetic nodes carry `synthetic: true`. How the snapshots are built and validated is in [`data/README.md`](data/README.md).
+
+### Ethics: real people vs personas
+
+The real git contributors in the graph are real people, so we only state real, public facts about them: which PRs they authored and which files those PRs changed (and, derived from that, which services they know). `who_knows` ranks only these real authors, by their real authorship.
+
+Everything fictional that involves a person belongs to **personas**: clearly fictional people (`Person {persona: true, role}`) who post the chat threads and file the tickets (`POSTED`), sign off ADRs (`DECIDED_BY`), carry the on-call rotation (`ON_CALL_FOR`) and respond to incidents (`RESPONDED_BY`). Synthetic text never quotes a real contributor or attributes statements to one. It may cite real PRs by number and title.
+
+> TODO(platform): the persona policy is in the contract and the spec (SPEC §1) but not yet in the data. The current `data/*.json` still attach synthetic chat and on-call to real contributors (0 persona nodes as of this writing). Remove this note once the data workstream regenerates the snapshots.
 
 ## Deployment
 
@@ -238,7 +249,7 @@ FalkorDB Cloud + Neon/Render Postgres + Render (web and MCP from one Dockerfile 
 
 ```
 apps/
-  web/        Next.js 15 console: incident + ask modes, graph view, Why? drawer, /memory inspector
+  web/        Next.js 15 console: incident + ask modes, graph view, Why? drawer, /memory inspector, /people (TODO)
   mcp/        MCP server (stdio + Streamable HTTP) over the same tool registry
 packages/
   shared/     The contract: labels, relationship types, tool schemas, events (zod)

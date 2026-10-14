@@ -24,8 +24,11 @@ Owner: platform workstream (`apps/mcp`, infra, CI, README + docs).
 
 - **Final docs pass** (re-read the graph/data/agents/web progress logs and code): ARCHITECTURE now uses the real memory Cypher from packages/graph, the real pipeline order (`run_started` before `startSession`) and the concurrency checks; DEMO uses real scenario ids (acme-checkout-5xx: 6-service blast radius, PR #4059, Piotr Kiełkowicz, INC-2026-037; acme-ask-valkey: ADR-001; acme-cart-errors + `add-prs`: #3988 → #4087). I verified recall and add-prs live in the throwaway namespace `democheck` (deleted afterwards). README track table and scripts table match the real commands and UI labels. `.env.example` gained `NEXT_PUBLIC_ENABLE_FIXTURES` and a commented-out `NEXT_DIST_DIR`.
 
+- **Contract change POSTED:** added to `REL_DIRECTIONS` in `apps/mcp/src/schema.ts` (the guard unit test caught it); typecheck + tests green.
+- **Persona policy documented** (README data model + mermaid + provenance + "Ethics: real people vs personas", ARCHITECTURE decision row, DEMO 2:00–2:10 `/people` beat). Marked **TODO**, because at the time of writing the data has 0 persona nodes / 0 POSTED edges, and there is no `/people` page and no `listPeople` in graph.
+
 ## In progress
-- Nothing.
+- Waiting for data/graph/web persona work, to verify and remove the persona TODOs.
 
 ## Open TODOs left in docs (for the team)
 - README: demo GIF/video, live URL, team names, each teammate's contribution, `docs/LEARN.md` (lead).

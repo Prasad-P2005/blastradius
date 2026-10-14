@@ -49,7 +49,7 @@ flowchart LR
 
 | Component | Package | Owns | Talks to |
 |---|---|---|---|
-| Console | `apps/web` | Pages, SSE stream, graph view, Why? drawer, Memory inspector | `@blastradius/agents`, `@blastradius/graph` (read models) |
+| Console | `apps/web` | Pages (`/` console, `/memory` inspector, `/people` TODO), SSE stream, graph view, Why? drawer | `@blastradius/agents`, `@blastradius/graph` (read models) |
 | Agent pipeline | `packages/agents` | `investigate()`, scripted/LLM modes, actions | graph (tools + memory), db |
 | Graph layer | `packages/graph` | The only code that talks to FalkorDB: connection, schema, tools, memory, loaders, embeddings | FalkorDB |
 | MCP server | `apps/mcp` | Exposes `toolSpecs` over MCP | graph |
@@ -209,4 +209,5 @@ The HTTP transport is stateful: an `initialize` POST creates a session (the SDK 
 | **`uid` ids everywhere** (`Label:key`) | Stable across reloads (FalkorDB internal ids are not), readable in Cypher and in the UI, and they keep internal ids out of every API. |
 | **"Recent" measured from the newest PR in the graph** | The snapshot is a fixed point in time; measuring from today would make every PR "old" after a week and break the demo. |
 | **Whitelisted labels and relationship types** | Cypher cannot parameterise labels, so the only interpolated parts of a query are checked against `NODE_LABELS` / `REL_TYPES` first. All values are parameters. |
+| **Real people carry only real facts; personas carry the fiction** | Real contributors appear only through public git facts (`AUTHORED` PRs, and what those PRs touched), and `who_knows` ranks only them. Synthetic chat, tickets, ADR sign-off, on-call and incident response belong to fictional personas (`Person {persona: true, role}`, `POSTED`). We never attribute invented statements or duties to real people. The planned `/people` page reads each person's activity live from the graph (`listPeople` / `personActivity`, SPEC §3), including findings from agent sessions that name them. TODO(platform): in the contract and spec, not yet in data/graph/web at the time of writing. |
 | **TS source packages, no build step** | Fewer moving parts in a 4-day hackathon: `tsx` for scripts and the MCP server, `transpilePackages` for Next.js. |
