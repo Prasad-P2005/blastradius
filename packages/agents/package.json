@@ -12,7 +12,8 @@
     "test:integration": "vitest run int.test",
     "smoke": "tsx src/scripts/smoke.ts",
     "concurrency": "tsx src/scripts/concurrency.ts",
-    "investigate": "tsx src/scripts/investigate.ts"
+    "investigate": "tsx src/scripts/investigate.ts",
+    "scenarios": "tsx src/scripts/scenarios.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
