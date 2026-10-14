@@ -463,7 +463,7 @@ export const ACME_CONTENT: TenantContent = {
       suspectPr: 4059,
       pastIncident: "INC-2026-037",
       presenterNote:
-        "Blast radius walks frontend → frontend-proxy → load-generator/mobile. The suspect is a real lockfile regeneration (#4059) that touched payment, email and shipping, all checkout dependencies. Recall pulls up INC-2026-037, the last time checkout fell over.",
+        "Blast radius walks frontend → frontend-proxy → load-generator/mobile. The suspect is a real lockfile regeneration (#4059) that touched payment and email, both checkout dependencies. Recall pulls up INC-2026-037, the last time checkout fell over.",
     },
     {
       id: "acme-payment-failures",
@@ -471,9 +471,10 @@ export const ACME_CONTENT: TenantContent = {
       title: "Payment charge failures",
       question: "payment Charge failing for 8% of orders since 09:40",
       alert: { service: "payment", metric: "payment_charge_errors_ratio", value: "0.08", message: "payment Charge error ratio 8% since 09:40" },
-      suspectPr: 3869,
+      suspectPr: 4059,
       pastIncident: "INC-2026-033",
-      presenterNote: "#3869 added PII redaction across checkout and payment two weeks earlier. Past incident INC-2026-033 shows the last payment outage and its runbook.",
+      presenterNote:
+        "The newest human change on payment is #4059, a repo-wide lockfile regeneration that rewrote src/payment/package-lock.json six days earlier: a classic dependency-drift suspect. #3869 (PII redaction in checkout and payment) is the runner-up. Recall brings INC-2026-033, the last payment outage, with its rollback runbook.",
     },
     {
       id: "acme-product-catalog-latency",
@@ -493,9 +494,10 @@ export const ACME_CONTENT: TenantContent = {
       question: "cart GetCart errors at 6%, carts not loading",
       alert: { service: "cart", metric: "cart_grpc_server_errors_ratio", value: "0.06", message: "cart GetCart error ratio 6% over 10m" },
       suspectPr: 3988,
-      pastIncident: "INC-2026-031",
+      pastIncident: "INC-2026-040",
+      expert: "piotr-kielkowicz",
       presenterNote:
-        "Before `add-prs`, the top suspect is #3988. Run `pnpm --filter @blastradius/ingest add-prs --tenant acme` and ask again: #4087 (a new cart-service demo flag in ValkeyCartStore) appears on top. That is incremental re-ingest.",
+        "Recall surfaces INC-2026-040 (cartFailure flag shipped at 10%) and its flagd runbook. Before `add-prs`, the top suspect is #3988. Run `pnpm --filter @blastradius/ingest add-prs --tenant acme` and ask again: #4087 (a new cart-service demo flag in ValkeyCartStore) appears on top. That is incremental re-ingest.",
     },
     {
       id: "acme-ask-valkey",
