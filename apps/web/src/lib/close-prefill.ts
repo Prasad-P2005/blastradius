@@ -21,27 +21,40 @@ export function prefillClose(run: RunState): CloseIncidentRequest | null {
   const summary = findingsOfKind(run, "summary")[0];
   const service = run.service ?? firstUid(findingsOfKind(run, "impact"), "Service:") ?? firstUid(all, "Service:") ?? "";
   const causedByPr = firstUid(cause, "PR:");
-  const responders = [...new Set(experts.flatMap((f) => [...f.about, ...f.evidence]).filter((u) => u.startsWith("Person:")))];
+  // top 3: expert findings list the best person first (then backup / on-call)
+  const responders = [...new Set(experts.flatMap((f) => [...f.about, ...f.evidence]).filter((u) => u.startsWith("Person:")))].slice(0, 3);
 
-  // Runbook: recalled memory first, then a past_incidents row with runbookSteps.
+  // Runbook: the one the top `precedent` finding cites (steps from the tool rows or recalled
+  // memory), else a recalled memory runbook, else the first past_incidents row with steps.
   let steps: string[] = [];
   let runbookTitle = "";
-  const recalled = run.memories.find((m) => m.runbook && m.runbook.steps.length);
-  if (recalled?.runbook) {
-    steps = [...recalled.runbook.steps];
-    runbookTitle = recalled.runbook.title;
-  } else {
-    for (const c of Object.values(run.toolCalls)) {
-      if (c.tool !== "past_incidents") continue;
-      const row = c.result?.rows.find((r) => Array.isArray(r.runbookSteps) && r.runbookSteps.length);
-      if (row && Array.isArray(row.runbookSteps)) {
-        steps = row.runbookSteps.filter((x): x is string => typeof x === "string");
-        break;
-      }
+  const runbookRows = Object.values(run.toolCalls)
+    .filter((c) => c.tool === "past_incidents" || c.tool === "similar_incidents")
+    .flatMap((c) => c.result?.rows ?? []);
+  const stepsOf = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+  const precedentRunbook = firstUid(findingsOfKind(run, "precedent"), "Runbook:");
+  if (precedentRunbook) {
+    const mem = run.memories.find((m) => m.runbook?.uid === precedentRunbook)?.runbook;
+    const row = runbookRows.find((r) => r.runbook === precedentRunbook && stepsOf(r.runbookSteps).length);
+    if (mem?.steps.length) {
+      steps = [...mem.steps];
+      runbookTitle = mem.title;
+    } else if (row) {
+      steps = stepsOf(row.runbookSteps);
+      runbookTitle = typeof row.runbookTitle === "string" ? row.runbookTitle : "";
+    }
+  }
+  if (steps.length === 0) {
+    const recalled = run.memories.find((m) => m.runbook && m.runbook.steps.length);
+    if (recalled?.runbook) {
+      steps = [...recalled.runbook.steps];
+      runbookTitle = recalled.runbook.title;
+    } else {
+      const row = runbookRows.find((r) => stepsOf(r.runbookSteps).length);
+      if (row) steps = stepsOf(row.runbookSteps);
     }
   }
   if (causedByPr) steps = [`Roll back ${causedByPr.replace("PR:", "PR #")} and confirm the error rate recovers`, ...steps];
-  if (summary) steps.push(`Follow-up: ${summary.claim}`);
   if (steps.length === 0) steps = ["Describe what fixed it"];
 
   const svcName = service.replace(/^Service:/, "");

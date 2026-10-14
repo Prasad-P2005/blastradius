@@ -10,6 +10,7 @@ import {
   TENANTS,
   TENANT_INFO,
   type AgentEvent,
+  type CloseIncidentRequest,
   type GNode,
   type GraphPath,
   type HealthStatus,
@@ -54,7 +55,9 @@ export function Console() {
   const [selected, setSelected] = useState<GNode | null>(null);
   const [focus, setFocus] = useState<Set<string> | null>(null);
   const [why, setWhy] = useState<{ run: number; findingIds: string[] } | null>(null);
-  const [closeOpen, setCloseOpen] = useState(false);
+  // snapshot of the prefilled form + run, taken when the dialog opens (the run then becomes "closed")
+  const [closing, setClosing] = useState<{ init: CloseIncidentRequest; runId: string } | null>(null);
+  const closeOpen = closing !== null;
   const [closedRuns, setClosedRuns] = useState<Set<string>>(new Set());
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [loadingSession, setLoadingSession] = useState(false);
@@ -151,7 +154,7 @@ export function Console() {
     setFocus(null);
     setSelected(null);
     setWhy(null);
-    setCloseOpen(false);
+    setClosing(null);
   }, []);
 
   const switchTenant = (t: Tenant) => {
@@ -466,7 +469,7 @@ export function Console() {
             {canClose && closeInitial && (
               <div className="mb-2 flex items-center gap-2 rounded-md border border-ok/30 bg-ok/[0.06] px-2.5 py-1.5">
                 <span className="text-xs text-fg-2">Run finished with {latest?.findingOrder.length} findings.</span>
-                <button type="button" onClick={() => setCloseOpen(true)} className="ml-auto rounded bg-ok/90 px-2.5 py-1 text-xs font-medium text-bg hover:bg-ok">
+                <button type="button" onClick={() => latest?.runId && setClosing({ init: closeInitial, runId: latest.runId })} className="ml-auto rounded bg-ok/90 px-2.5 py-1 text-xs font-medium text-bg hover:bg-ok">
                   Close incident →
                 </button>
               </div>
@@ -531,14 +534,14 @@ export function Console() {
         {why && runs[why.run] && (
           <WhyDrawer run={runs[why.run]!} findingIds={why.findingIds} onClose={() => setWhy(null)} onFocus={onFocusPaths} onUid={onUid} />
         )}
-        {closeOpen && closeInitial && latest?.runId && (
+        {closing && (
           <CloseIncidentDialog
-            initial={closeInitial}
-            onClose={() => setCloseOpen(false)}
+            initial={closing.init}
+            onClose={() => setClosing(null)}
             onSubmit={async (req) => {
               if (fixture) throw new Error("Closing an incident needs the real backend (fixture mode is read-only).");
               const res = await api.closeIncident(req);
-              setClosedRuns((s) => new Set(s).add(latest.runId!));
+              setClosedRuns((s) => new Set(s).add(closing.runId));
               void refreshSessions();
               return res;
             }}

@@ -129,6 +129,11 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
     if (!fg) return;
     if (focus && focus.size) fg.zoomToFit(600, 110, (n: N) => focus.has(n.id));
     else fg.zoomToFit(600, 70);
+    // A tiny graph (3 nodes) would otherwise fill the panel with giant circles.
+    setTimeout(() => {
+      const z = fgRef.current?.zoom();
+      if (typeof z === "number" && z > 2.6) fgRef.current?.zoom(2.6, 300);
+    }, 650);
   };
   useEffect(() => {
     pendingFit.current = true;
@@ -265,13 +270,21 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
 
           // labels: services/teams always (when not too zoomed out), others when highlighted/hovered
           const important = g.label === "Service" || g.label === "Team" || g.label === "Session" || (compact === true && (g.label === "Agent" || g.label === "Episode"));
-          const show = hoverNode === n.id || selected === n.id || (spotlight?.has(n.id) ?? false) || (important && scale > 0.7) || scale > 2.2;
+          // Labels: keep the canvas readable with 80+ involved nodes. Focused/hovered always,
+          // services/teams when not zoomed far out, other involved nodes once zoomed in a bit.
+          const show =
+            hoverNode === n.id ||
+            selected === n.id ||
+            (focus?.has(n.id) ?? false) ||
+            (important && scale > 0.7) ||
+            ((involved?.has(n.id) ?? false) && scale > 1.5) ||
+            scale > 2.6;
           if (show) {
             const fs = Math.max(9, 11.5 / Math.sqrt(scale)) / scale * Math.min(scale, 1.6);
             ctx.font = `${spotlight?.has(n.id) ? 600 : 400} ${fs}px Inter, ui-sans-serif, system-ui`;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
-            const max = g.label === "Service" || g.label === "Person" ? 28 : 22;
+            const max = g.label === "Service" || g.label === "Person" ? 28 : 20;
             const text = g.name.length > max ? `${g.name.slice(0, max - 1)}…` : g.name;
             ctx.lineWidth = 3 / scale;
             ctx.strokeStyle = "rgba(9,11,15,0.9)";

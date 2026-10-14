@@ -112,34 +112,53 @@ function MemoryCard({ memories, cb }: { memories: RecalledMemory[]; cb: RunCallb
       ) : (
         <div className="flex flex-col divide-y divide-line">
           {memories.map((m) => (
-            <div key={m.uid} className="px-3 py-2">
-              <div className="flex items-start gap-2">
-                <UidPill uid={m.uid} name={m.kind === "incident" ? m.uid.split(":").slice(1).join(":") : m.agent ?? "finding"} onClick={cb.onUid} size="xs" />
-                <button type="button" onClick={() => cb.onUid(m.uid)} className="min-w-0 flex-1 text-left text-xs text-fg-2 hover:text-fg">
-                  {m.title}
-                </button>
-                {m.similarity !== undefined && <span className="font-mono text-2xs text-muted">{m.similarity.toFixed(2)}</span>}
-              </div>
-              <div className="mt-0.5 pl-0.5 text-xs text-muted">{m.summary}</div>
-              {m.sessionId && <div className="mt-0.5 font-mono text-2xs text-faint">session {m.sessionId}</div>}
-              {m.runbook && (
-                <div className="mt-1.5 rounded border border-line bg-panel-2 px-2 py-1.5">
-                  <div className="flex items-center gap-1.5 text-2xs">
-                    <UidPill uid={m.runbook.uid} name="runbook" size="xs" onClick={cb.onUid} />
-                    <span className="text-fg-2">{m.runbook.title}</span>
-                  </div>
-                  <ol className="mt-1 list-decimal pl-5 text-xs text-muted marker:text-faint">
-                    {m.runbook.steps.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-            </div>
+            <MemoryRow key={m.uid} m={m} cb={cb} />
           ))}
         </div>
       )}
     </CardShell>
+  );
+}
+
+function MemoryRow({ m, cb }: { m: RecalledMemory; cb: RunCallbacks }) {
+  const [open, setOpen] = useState(false);
+  // For findings the "summary" is often just the finding kind; show it as a tag instead of a paragraph.
+  const shortSummary = m.summary && m.summary.length <= 24 ? m.summary : null;
+  const longSummary = m.summary && !shortSummary && m.summary !== m.title ? m.summary : null;
+  const steps = m.runbook?.steps ?? [];
+  return (
+    <div className="px-3 py-2">
+      <div className="flex items-start gap-2">
+        <UidPill uid={m.uid} name={m.kind === "incident" ? m.uid.split(":").slice(1).join(":") : (m.agent ?? "finding")} onClick={cb.onUid} size="xs" />
+        <button type="button" onClick={() => setOpen((o) => !o)} className={cx("min-w-0 flex-1 text-left text-xs text-fg-2 hover:text-fg", !open && "line-clamp-2")}>
+          {m.title}
+        </button>
+        {shortSummary && <span className="shrink-0 rounded bg-panel-3 px-1 font-mono text-2xs text-muted">{shortSummary}</span>}
+        {m.similarity !== undefined && <span className="shrink-0 font-mono text-2xs text-muted">{m.similarity.toFixed(2)}</span>}
+      </div>
+      {longSummary && <div className={cx("mt-0.5 text-xs text-muted", !open && "line-clamp-2")}>{longSummary}</div>}
+      {m.sessionId && <div className="mt-0.5 font-mono text-2xs text-faint">session {m.sessionId}</div>}
+      {m.runbook && (
+        <div className="mt-1.5 rounded border border-line bg-panel-2 px-2 py-1.5">
+          <div className="flex items-center gap-1.5 text-2xs">
+            <UidPill uid={m.runbook.uid} name="runbook" size="xs" onClick={cb.onUid} />
+            <span className="text-fg-2">{m.runbook.title}</span>
+          </div>
+          <ol className="mt-1 list-decimal pl-5 text-xs text-muted marker:text-faint">
+            {(open ? steps : steps.slice(0, 3)).map((s, i) => (
+              <li key={i} className={open ? "" : "truncate"}>
+                {s}
+              </li>
+            ))}
+          </ol>
+          {steps.length > 3 && (
+            <button type="button" onClick={() => setOpen((o) => !o)} className="mt-0.5 pl-5 font-mono text-2xs text-faint hover:text-fg">
+              {open ? "less" : `+${steps.length - 3} more steps`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -203,7 +222,8 @@ function AgentCard({ run, agent, cb }: { run: RunState; agent: AgentView; cb: Ru
 
       {agent.messages.map((m) => (
         <div key={m.seq} className="border-t border-line bg-panel-2/40 px-3 py-2.5">
-          <p className="text-sm leading-relaxed text-fg">{m.text}</p>
+          {/* skip the paragraph when it just repeats one of the claims (scripted mode often does) */}
+          {!m.claimIds.some((cid) => run.claims[cid]?.text.trim() === m.text.trim()) && <p className="text-sm leading-relaxed text-fg">{m.text}</p>}
           {m.claimIds.length > 0 && (
             <ul className="mt-2 flex flex-col gap-1">
               {m.claimIds.map((cid) => {
