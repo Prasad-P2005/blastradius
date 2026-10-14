@@ -63,5 +63,6 @@ describe("misc", () => {
   });
   it("parses dotenv", () => {
     expect(parseDotenv('A=1\n# c\nexport B="x y"\nC=z # tail\n')).toEqual({ A: "1", B: "x y", C: "z" });
+    expect(parseDotenv("WEBHOOK_URL=   # Slack or Discord\nD=#\n")).toEqual({ WEBHOOK_URL: "", D: "" });
   });
 });

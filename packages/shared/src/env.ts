@@ -30,6 +30,8 @@ export function parseDotenv(src: string): Record<string, string> {
     let value = m[2] ?? "";
     if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
       value = value.slice(1, -1);
+    } else if (value.startsWith("#")) {
+      value = ""; // `KEY=   # comment` means empty, not the comment text
     } else {
       value = value.replace(/\s+#.*$/, "");
     }
