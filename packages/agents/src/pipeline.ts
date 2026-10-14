@@ -279,7 +279,7 @@ export function claimsFor(agent: AgentName, own: Finding[], sessionFindings: Fin
   const claims: Claim[] = own.filter((f) => f.cypher.length > 0).map((f) => ({ text: f.claim, findingIds: [f.id] }));
   if (agent === "scribe") {
     for (const kind of ["impact", "cause", "expert", "precedent"] as const) {
-      const f = sessionFindings.find((x) => x.kind === kind && x.cypher.length > 0);
+      const f = sessionFindings.findLast((x) => x.kind === kind && x.cypher.length > 0);
       if (f) claims.push({ text: f.claim, findingIds: [f.id] });
     }
   }

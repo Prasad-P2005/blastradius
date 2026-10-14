@@ -50,7 +50,11 @@ export async function checkRun(c: Checker, o: RunOutcome, graph: Graph, db: Db, 
   c.ok(!fatal, `no fatal error${fatal && fatal.type === "error" ? `: ${fatal.where} ${fatal.message}` : ""}`);
 
   // 1. findings, read back from the graph
-  const findings = await graph.getFindings(tenant, o.sessionId);
+  // (a session can hold several runs: keep this run's findings, and check each one exists in the graph)
+  const runFindingIds = new Set(o.events.flatMap((e) => (e.type === "finding" ? [e.finding.id] : [])));
+  const inGraph = await graph.getFindings(tenant, o.sessionId);
+  const findings = inGraph.filter((f) => runFindingIds.has(f.id));
+  c.ok(findings.length === runFindingIds.size, `all ${runFindingIds.size} streamed findings exist in the graph (${findings.length})`);
   const agents = o.req.mode === "incident" ? INCIDENT_AGENTS : (["navigator"] as AgentName[]);
   for (const a of agents) {
     const mine = findings.filter((f) => f.agent === a);
@@ -77,11 +81,11 @@ export async function checkRun(c: Checker, o: RunOutcome, graph: Graph, db: Db, 
       tenant,
       `// handoff edges of one session
 MATCH (f:Finding {sessionId: $sessionId})-[:HANDED_TO]->(a:Agent)
-RETURN f.agent AS from, a.name AS to`,
+RETURN f.id AS id, f.agent AS from, a.name AS to`,
       { sessionId: o.sessionId },
       { readOnly: true },
     );
-    const pairs = new Set(rows.map((r) => `${r.from}->${r.to}`));
+    const pairs = new Set(rows.filter((r) => runFindingIds.has(String(r.id))).map((r) => `${r.from}->${r.to}`));
     for (const [from, to] of CHAIN) c.ok(pairs.has(`${from}->${to}`), `HANDED_TO chain ${from} → ${to} exists in the graph`);
     // downstream agents read handoffs first
     for (const a of ["investigator", "expert", "scribe"] as AgentName[]) {
@@ -91,7 +95,8 @@ RETURN f.agent AS from, a.name AS to`,
   }
 
   // 4. claims → real findings with non-empty cypher
-  const byId = new Map(findings.map((f) => [f.id, f]));
+  // claims may cite any finding of the session in the graph (the scribe summarises the session)
+  const byId = new Map(inGraph.map((f) => [f.id, f]));
   const messages = o.events.filter((e) => e.type === "agent_message");
   c.ok(messages.length === agents.length, `one agent_message per agent (${messages.length})`);
   for (const m of messages) {

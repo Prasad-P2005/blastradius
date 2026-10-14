@@ -201,10 +201,11 @@ const SUMMARY_ORDER = ["impact", "cause", "expert", "precedent"] as const;
 export async function scriptedScribe(scope: AgentScope, sessionFindings: Finding[]): Promise<string> {
   const handoffs = await scope.callTool("read_handoffs", {});
   const service = serviceFromHandoffs(handoffs.result.rows, scope.run.service) ?? "the service";
-  // One finding per kind, in reading order, from this session's findings in the graph.
+  // One finding per kind, in reading order, from this session's findings in the graph (oldest first).
   const picked: Finding[] = [];
   for (const kind of SUMMARY_ORDER) {
-    const f = sessionFindings.find((x) => x.kind === kind && x.cypher.length > 0);
+    // newest of each kind: in a continued session, summarise the latest run's work
+    const f = sessionFindings.findLast((x) => x.kind === kind && x.cypher.length > 0);
     if (f) picked.push(f);
   }
   const claim = summaryClaim(service, picked.map((f) => f.claim));
