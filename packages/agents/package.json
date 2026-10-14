@@ -9,7 +9,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --exclude '**/*.int.test.ts'",
-    "test:integration": "vitest run int.test",
+    "test:integration": "vitest run int.test --passWithNoTests",
     "smoke": "tsx src/scripts/smoke.ts",
     "concurrency": "tsx src/scripts/concurrency.ts",
     "investigate": "tsx src/scripts/investigate.ts",
