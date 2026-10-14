@@ -76,9 +76,9 @@ sequenceDiagram
   UI->>RT: InvestigateRequest {tenant, mode:'incident', alert}
   RT->>AG: investigate(req)
   AG->>PG: save user message (best-effort)
-  AG->>G: startSession()
-  G->>FK: MERGE (:Session {sessionId})
   AG-->>UI: run_started (SSE)
+  AG->>G: startSession()
+  G->>FK: MERGE (:Session {sessionId})-[:INVESTIGATES]->(:Service)
   AG->>G: runTool('recall_memory')
   G->>FK: findings + resolved incidents from OTHER sessions
   AG-->>UI: memory_recalled
@@ -138,29 +138,34 @@ flowchart LR
 | **Semantic** | The domain graph itself, plus `Finding` nodes: claims linked to the nodes they are about and the evidence behind them | `recordFinding` (the `record_finding` tool) | `read_handoffs`, `recall_memory`, Why? drawer |
 | **Procedural** | `Incident` + `Runbook` nodes: what broke, what caused it, what fixed it | Seed data (synthetic) and the Scribe on **Close incident** (`closeIncident`) | `past_incidents`, `similar_incidents`, `recall_memory` |
 
-Illustrative Cypher (the exact queries are in `packages/graph` and `docs/CYPHER.md`):
+The real queries, copied from `packages/graph` (all of them, with live outputs, are in [`docs/CYPHER.md`](CYPHER.md#memory-track-02)):
 
 ```cypher
-// Episodic: append an episode to a session's chain
+// Append an Episode to the session's chain. seq is computed INSIDE the write
+// query (FalkorDB serialises writes per graph), so concurrent appends are safe.
 MATCH (s:Session {sessionId: $sessionId})
-OPTIONAL MATCH (s)-[:HAS_EPISODE]->(last:Episode) WHERE NOT (last)-[:NEXT]->()
-CREATE (e:Episode {uid: $uid, sessionId: $sessionId, seq: $seq, agent: $agent, kind: $kind, summary: $summary, at: $at})
-CREATE (s)-[:HAS_EPISODE]->(e)
-FOREACH (_ IN CASE WHEN last IS NULL THEN [] ELSE [1] END | CREATE (last)-[:NEXT]->(e))
+OPTIONAL MATCH (s)-[:HAS_EPISODE]->(prev:Episode)
+WITH s, prev ORDER BY prev.seq DESC LIMIT 1
+WITH s, prev, CASE WHEN prev IS NULL THEN 0 ELSE prev.seq + 1 END AS seq
+CREATE (ep:Episode {uid: 'Episode:' + $sessionId + ':' + toString(seq), sessionId: $sessionId, seq: seq,
+                    agent: $agent, kind: $kind, summary: $summary, at: $now})
+CREATE (s)-[:HAS_EPISODE]->(ep)
+FOREACH (_ IN CASE WHEN prev IS NULL THEN [] ELSE [1] END | CREATE (prev)-[:NEXT]->(ep))
+RETURN ep.uid AS uid, seq
 ```
 
 ```cypher
-// Handoff: findings in this session handed to me
-MATCH (f:Finding {sessionId: $sessionId})-[:HANDED_TO]->(:Agent {name: $agent})
-RETURN f.id, f.agent, f.claim, f.confidence, f.about, f.evidence, f.cypher
+// Findings in THIS session handed to the calling agent (graph-only handoff)
+MATCH p = (from:Agent)-[:WROTE]->(f:Finding {sessionId: $sessionId})-[:HANDED_TO]->(:Agent {name: $agent})
+RETURN f.id AS finding, f.uid AS uid, from.name AS from, f.kind AS kind, f.claim AS claim,
+       f.confidence AS confidence, f.about AS about, f.evidence AS evidence, f.cypher AS cypher,
+       f.createdAt AS createdAt, p AS path
+ORDER BY createdAt ASC
 ```
 
-```cypher
-// Recall across sessions: what earlier sessions learned about this service
-MATCH (f:Finding)-[:ABOUT]->(s:Service {uid: $service})
-WHERE f.sessionId <> $sessionId
-RETURN f ORDER BY f.createdAt DESC LIMIT $limit
-```
+`recall_memory` is a single `CALL { … UNION ALL … }` query with four branches, and every branch excludes the current session: findings `ABOUT` the service, resolved incidents on the service with their `RESOLVED_BY` runbook, and vector-index matches on `Finding` and on `Incident` for the question text. Each row carries the path that connects it to the service.
+
+**Concurrency.** Episode `seq` numbers are computed inside the write query. FalkorDB runs writes to one graph one at a time, and each query is atomic, so parallel agents appending to the same session get distinct, gap-free sequence numbers. `pnpm concurrency` exercises this. It starts 10 scripted investigations at once across both tenants (two of them share one session, which is the real race), then reads the stores back and checks three things: every session's Episode chain is intact (seq 0..n-1, one `NEXT` per step, no forks or duplicates); no finding references a node or session from the other tenant; and there are no event-seq gaps in Postgres. By default it runs in its own graph namespace (`concurrency_…`), so the demo graphs stay clean.
 
 **Cross-session recall** is the payoff: close an incident in session A (the Scribe writes `Incident` + `Runbook` linked to the service and the cause PR), start session B on the same service, and `recall_memory` returns A's incident and runbook with the graph path that connects them.
 
