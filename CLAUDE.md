@@ -115,7 +115,7 @@ A sub-agent edits **only** its own files. Cross-team needs go in `docs/requests/
 
 Shared files everyone may append to (never rewrite others' lines): `docs/progress/<you>.md` (yours alone) and `docs/requests/<you>.md` (yours alone).
 
-**Adding a dependency** to your own package's `package.json` is fine. Run `pnpm install` from the repo root. If `pnpm-lock.yaml` conflicts, re-run `pnpm install` rather than hand-editing it.
+**Adding a dependency** to your own package's `package.json` is fine. Run `pnpm install` from the repo root. Always `export ONNXRUNTIME_NODE_INSTALL_CUDA=skip` first: otherwise `onnxruntime-node`'s postinstall downloads CUDA libraries for minutes, and we only run CPU inference. If `pnpm-lock.yaml` conflicts, re-run `pnpm install` rather than hand-editing it.
 
 **Git:** several agents commit to the same `main` branch in parallel. Stage **only your own paths** (`git add packages/graph docs/CYPHER.md docs/progress/graph.md`) plus `pnpm-lock.yaml` when you changed deps, and never `git add -A`. Write messages as `feat(graph): …`, `fix(web): …`. If a commit races, run `git pull --rebase` (no remote; just retry) or simply commit again. Never rewrite history and never `--force`.
 
