@@ -11,7 +11,6 @@
  *      and follow-up tickets for real PRs and incidents.
  * Every placeholder becomes a MENTIONS edge; `about` becomes ABOUT edges.
  */
-import { uid } from "@blastradius/shared";
 import type { GraphBuilder } from "../graph-builder.ts";
 import type { Rng } from "../prng.ts";
 import { DAY, HOUR } from "../time.ts";
@@ -200,4 +199,3 @@ export function writeBrain(c: Ctx, content: TenantContent): { issues: number; th
   return { issues: issues.length, threads: threads.length };
 }
 
-export { uid };

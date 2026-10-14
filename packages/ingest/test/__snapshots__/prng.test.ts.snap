@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`prng > pins the first values (guards against accidental algorithm changes) 1`] = `
+[
+  "0.18441183",
+  "0.18998925",
+  "0.81047199",
+]
+`;

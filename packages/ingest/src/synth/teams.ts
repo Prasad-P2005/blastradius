@@ -3,9 +3,11 @@
  *
  * Open-source repos have no org chart, so we invent one that is consistent
  * with who actually touches what:
- *   1. Each tenant's content file names 3–5 teams and a couple of "anchor"
- *      services per team (e.g. Cart & Catalog anchors cart + product-catalog).
- *   2. Every other service joins the team whose services share the most
+ *   1. Each tenant's content file names 3–5 teams and their "anchor" services
+ *      (curated: e.g. Cart & Catalog anchors cart, valkey-cart, product-catalog).
+ *      We curate most ownership because pure author-overlap clustering puts
+ *      services with few, generalist authors in odd places.
+ *   2. Every other service (e.g. acme's agent/mcp/chatbot) joins the team whose services share the most
  *      human authors with it (Jaccard similarity of author sets). Services
  *      with no human authors (stock datastores) join the team of a service
  *      that calls them.

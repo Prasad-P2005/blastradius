@@ -8,11 +8,16 @@
 - CLIs `clone`, `snapshot` run: acme 605 PRs (227 human), globex 1101 PRs (175 human).
 - Synth modules written (not yet run): `synth/context.ts teams.ts oncall.ts text.ts incidents.ts decisions.ts brain.ts scenarios.ts index.ts`.
 
+- `content/acme.ts`, `content/globex.ts`: 9 incidents, 8/7 ADRs, 24 tickets, 22–24 threads, 4/3 incident + 2/2 ask scenarios per tenant.
+- `synth` CLI writes data/acme.json (1.0 MB), data/globex.json (1.3 MB), data/scenarios.json (11 scenarios). Offline checks in synth/scenarios.ts.
+- `validate.ts` + CLI (all checks pass), 17 unit tests (validator, PRNG, people/paths/time).
+- `data:build` run twice → byte-identical (sha256 acme 2acef168…, globex 9b5308b7…).
+
 ## In progress
-- `content/acme.ts`, `content/globex.ts` (hand-written incidents, ADRs, tickets, threads, scenarios).
+- `load` (via @blastradius/graph), `add-prs`, `verify-scenarios`.
 
 ## Next
-- synth CLI → data/acme.json, data/globex.json, data/scenarios.json; validator + tests; load; add-prs; verify-scenarios; data/README.md.
+- Run verify-scenarios against FalkorDB, iterate, write data/README.md.
 
 ## Decisions
 - Scenarios are defined on the canonical snapshot (without deltas). acme scenarios are chosen to also hold after `add-prs` (window moves 6 days); globex's delta moves the window 6 weeks, so globex scenarios hold pre-delta only. verify-scenarios reports both.
