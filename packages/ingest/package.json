@@ -1,0 +1,26 @@
+{
+  "name": "@blastradius/ingest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "clone": "tsx src/cli/clone.ts",
+    "snapshot": "tsx src/cli/snapshot.ts",
+    "synth": "tsx src/cli/synth.ts",
+    "validate": "tsx src/cli/validate.ts",
+    "data:build": "pnpm run clone && pnpm run snapshot && pnpm run synth && pnpm run validate",
+    "load": "tsx src/cli/load.ts",
+    "add-prs": "tsx src/cli/add-prs.ts",
+    "verify-scenarios": "tsx src/cli/verify-scenarios.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@blastradius/db": "workspace:*",
+    "@blastradius/graph": "workspace:*",
+    "@blastradius/shared": "workspace:*"
+  }
+}
