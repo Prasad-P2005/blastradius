@@ -11,22 +11,10 @@ const nextConfig: NextConfig = {
   // Workspace packages are consumed as TypeScript source.
   transpilePackages: ["@blastradius/shared", "@blastradius/graph", "@blastradius/agents", "@blastradius/db"],
   // Native / heavy deps stay as runtime requires instead of being bundled.
-  serverExternalPackages: [
-    "falkordb",
-    "redis",
-    "@redis/client",
-    "@huggingface/transformers",
-    "onnxruntime-node",
-    "onnxruntime-web",
-    "sharp",
-    "postgres",
-    "pg",
-    "drizzle-orm",
-    "ai",
-    "@ai-sdk/anthropic",
-    "@ai-sdk/openai",
-    "@modelcontextprotocol/sdk",
-  ],
+  // They must also be direct deps of apps/web: with pnpm's strict layout Next can only
+  // externalise a package it can resolve from the app directory (otherwise it bundles it,
+  // and webpack chokes on onnxruntime's .wasm/.mjs side files).
+  serverExternalPackages: ["falkordb", "@huggingface/transformers", "onnxruntime-node", "postgres", "drizzle-orm"],
   // The repo is a pnpm workspace; trace files from the root for `next start` / standalone.
   outputFileTracingRoot: new URL("../..", import.meta.url).pathname,
   // TS source packages use `.ts` extensions in relative imports.
