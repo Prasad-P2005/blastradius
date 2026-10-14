@@ -16,28 +16,31 @@
 # environment, set EMBEDDINGS=hash (deterministic fallback, no network).
 
 ARG NODE_VERSION=22
+# Keep in sync with "packageManager" in package.json.
+ARG PNPM_VERSION=10.33.0
 
-# ── base: node + pnpm via corepack ────────────────────────────────────────────
+# ── base: node + pnpm ─────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-slim AS base
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     NEXT_TELEMETRY_DISABLED=1 \
-    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     ONNXRUNTIME_NODE_INSTALL_CUDA=skip
 # ONNXRUNTIME_NODE_INSTALL_CUDA=skip: onnxruntime-node's postinstall otherwise
 # downloads several hundred MB of CUDA provider libraries on linux/x64. We run on CPU.
 # ca-certificates: HTTPS to Hugging Face (model download), GitHub (actions), FalkorDB Cloud (TLS).
+# pnpm is installed with npm (which retries downloads) rather than corepack.
+ARG PNPM_VERSION
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
- && corepack enable
+ && npm install -g --fetch-retries=5 "pnpm@${PNPM_VERSION}" \
+ && pnpm --version
 WORKDIR /app
 
 # ── deps: install the whole workspace from the lockfile ───────────────────────
 # `pnpm fetch` needs only the lockfile, so this layer is cached until deps change.
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack install
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm config set store-dir /pnpm/store \
  && pnpm fetch --frozen-lockfile
