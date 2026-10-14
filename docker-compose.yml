@@ -50,6 +50,7 @@ services:
     environment: &app-env
       FALKORDB_URL: redis://falkordb:6379
       FALKORDB_PASSWORD: ${FALKORDB_PASSWORD:-}
+      BLASTRADIUS_GRAPH_NAMESPACE: ${BLASTRADIUS_GRAPH_NAMESPACE:-}
       DATABASE_URL: postgres://blast:blast@postgres:5432/blastradius
       AGENT_MODE: ${AGENT_MODE:-auto}
       LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}

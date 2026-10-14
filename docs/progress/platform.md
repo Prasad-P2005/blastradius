@@ -13,8 +13,11 @@ Owner: platform workstream (`apps/mcp`, infra, CI, README + docs).
 - **`docker build --target mcp .` succeeds** (image 1.28 GB). The first try failed at `corepack install` (network timeout), so pnpm is now installed with `npm i -g` and retries. A second try failed at `--frozen-lockfile` while the web agent's install was mid-flight (lockfile out of sync), and passed once it settled. I ran the image on `blastradius_default` (`-p 3334:3333`, `FALKORDB_URL=redis://falkordb:6379`): `/health` 200, tools/list returned 15 tools; the container was removed afterwards. Running falkordb/postgres untouched.
 - Int test now also covers FalkorDB unreachable → `isError` (stdio subprocess with `FALKORDB_URL=redis://127.0.0.1:1`). 7/8 pass; `critical_services` returns 0 rows only because no snapshot is loaded yet (the tool itself is implemented).
 
+- **Real data via MCP:** loaded `data/acme.json` + `globex.json` with `loadSnapshot` into **namespaced** graphs (`BLASTRADIUS_GRAPH_NAMESPACE=platform`, `EMBEDDINGS=hash`; acme 1100 nodes / 5368 edges, globex 1362 / 6784) so the shared `blastradius_*` graphs stay untouched. MCP int test **8/8 pass** with that namespace. Probed over MCP: blast_radius(checkout) = 6 services, suspect_changes top = PR #4059 (matches the acme-checkout-5xx scenario), who_knows top = Piotr Kiełkowicz, ask_company(Valkey) best = Doc:adr-001-cart-store-valkey, failure_communities = 8 CDLP communities.
+- **`docker build --target web .` succeeds** (next build). I ran it on `blastradius_default` with the platform namespace: `/api/health` reported falkordb+postgres ok (scripted, hash, direct), `/api/tenants` returned live counts, `/` returned 200. The container was removed afterwards.
+
 ## In progress
-- Waiting for data snapshots (`data/acme.json`) to re-run the read-tool test and dry-run CI.
+- Waiting for `pnpm graph:load` (ingest `load` CLI) and `pnpm smoke` to exist, so I can dry-run the CI sequence and the compose `seed` service.
 
 ## Next
 - Re-run the MCP int test once graph tools and data land (`critical_services` must return rows).
