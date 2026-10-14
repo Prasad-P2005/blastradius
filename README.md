@@ -23,20 +23,20 @@ Submission to **Graph Hacks: Context for AI Agents** (FalkorDB × WeMakeDevs, Oc
 | **01 Agents That Act on Connected Data** | Multi-hop reasoning | `blast_radius` (variable-length `DEPENDS_ON*1..N`), `suspect_changes` (`TOUCHES` + `DEPENDS_ON*0..N`), `decision_trace` | `packages/graph/src/tools/`, console tool timeline |
 | | Graph algorithms as agent tools | PageRank (`who_knows`), betweenness (`blast_radius`, `critical_services`), shortest path (`explain_path`), CDLP/WCC (`failure_communities`) | [`docs/CYPHER.md`](docs/CYPHER.md) |
 | | Same tools over MCP | `apps/mcp`: every tool in `toolSpecs`, over stdio and Streamable HTTP | [MCP section](#use-the-tools-from-claude-code-claude-desktop-or-cursor), `pnpm mcp` |
-| | Real actions | GitHub issue, Slack/Discord webhook, rollback PR in a sandbox repo (dry run when unconfigured) | Actions panel in the console; `packages/agents` |
+| | Real actions | GitHub issue, Slack/Discord webhook, rollback PR in a sandbox repo (dry run when unconfigured) | **Actions** in the run timeline; `packages/agents/src/actions.ts` |
 | | Why? on every claim | Each finding stores the exact Cypher string that ran plus its evidence path | Why? chip → drawer in the console |
 | **02 Agent Memory and Coordination** | Episodic memory | `Session-[:HAS_EPISODE]->Episode-[:NEXT]->Episode` | `/memory` (Memory inspector) |
 | | Semantic memory | Domain graph + `Finding` nodes (`ABOUT`, `SUPPORTED_BY`) | Memory inspector subgraph |
 | | Procedural memory | `Incident` + `Runbook` written by the Scribe on **Close incident** | Close incident button → `/memory` procedural panel |
 | | Handoffs only through graph state | `Finding-[:HANDED_TO]->Agent`, read with `read_handoffs` | Handoff events in the timeline; [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#2-one-investigation-end-to-end) |
-| | Recall across sessions | `recall_memory` excludes the current session and returns earlier findings and incidents with the connecting path | "Memory recalled" card at the start of a run |
-| | One graph per tenant | `blastradius_acme`, `blastradius_globex` | Tenant switcher; `GRAPH.LIST` |
-| | Concurrency | Parallel sessions writing memory to the same graph | `pnpm concurrency` |
+| | Recall across sessions | `recall_memory` excludes the current session and returns earlier findings and incidents with the connecting path | **Recalled memory** card at the start of a run |
+| | One graph per tenant | `blastradius_acme`, `blastradius_globex` | Tenant selector in the top bar; `redis-cli -p 6380 GRAPH.LIST` |
+| | Concurrency | 10 concurrent investigations (two sharing a session); checks episode chains, tenant isolation, event order | `pnpm concurrency` |
 | **03 Company Brain** | Tickets, threads, ADRs, docs with the code | `Issue`, `Thread`, `Decision`, `Doc` nodes linked to `Service`, `PR`, `Person` | Graph view; [data model](#graph-data-model) |
 | | Who owns or knows X | `who_knows` (topic or service), `service_context` | Ask mode |
 | | Decision tracing | `Doc <-DOCUMENTED_IN- Decision -JUSTIFIES-> PR <-CAUSED_BY- Incident` (`decision_trace`) | Ask mode, Why? drawer |
 | | Ask the company with sources | `ask_company`: vector search across text labels, then expansion to owners, PRs, decisions | Ask mode in the console |
-| | Incremental re-ingest | `ingestDelta` applies PRs newer than the snapshot (`data/deltas/`) | TODO(platform): confirm command name from `packages/ingest` |
+| | Incremental re-ingest | `ingestDelta` MERGEs real PRs merged after the snapshot (`data/deltas/`), with no reload; TOUCHES are derived for them | `pnpm --filter @blastradius/ingest add-prs --tenant acme` (the acme cart suspect changes from PR #3988 to #4087) |
 
 ## The five graph jobs
 
@@ -259,8 +259,11 @@ docs/         SPEC, ARCHITECTURE, CYPHER, DEMO, DEPLOY, LEARN
 | `pnpm data:build` | Rebuild `data/*.json` from the public repos |
 | `pnpm graph:load` | Load the snapshots into FalkorDB (one graph per tenant) |
 | `pnpm seed` | `db:migrate` + `graph:load` |
-| `pnpm smoke` | Run every scenario in scripted mode and check the results |
-| `pnpm concurrency` | Parallel sessions writing memory to one graph |
+| `pnpm smoke` | Scripted incident + close + recall + ask runs on both tenants, with checks (own graph namespace) |
+| `pnpm concurrency` | 10 concurrent investigations; checks memory integrity and tenant isolation |
+| `pnpm --filter @blastradius/ingest add-prs --tenant acme` | Incremental re-ingest of PRs merged after the snapshot |
+| `pnpm --filter @blastradius/agents scenarios` | Check every scenario in `data/scenarios.json` against the SPEC quality bar |
+| `pnpm --filter @blastradius/mcp fetch-model` | Download the embedding model into `.cache/hf` |
 | `pnpm mcp` | MCP server over Streamable HTTP on :3333 |
 | `pnpm --filter @blastradius/mcp stdio` | MCP server over stdio |
 | `pnpm typecheck` / `pnpm test` | Typecheck all packages / unit tests (no DB) |
@@ -271,7 +274,7 @@ CI (`.github/workflows/ci.yml`) runs typecheck and unit tests, then an integrati
 
 We used **Claude Code (Claude Opus)** as a coding assistant to scaffold and implement much of the code, under the team's direction. An orchestrator agent coordinated sub-agents, one per workstream (graph, data, agents, web, platform), each limited to its own files and working from a shared written contract (`packages/shared`) and spec (`docs/SPEC.md`).
 
-The humans chose the idea, the architecture and the graph data model, wrote and reviewed the spec, reviewed and verified the output, and are responsible for every line. Every teammate must be able to explain the graph model, the queries, the architecture and the decisions. [`docs/LEARN.md`](docs/LEARN.md) is the study guide we use for that.
+The humans chose the idea, the architecture and the graph data model, wrote and reviewed the spec, reviewed and verified the output, and are responsible for every line. Every teammate must be able to explain the graph model, the queries, the architecture and the decisions. [`docs/LEARN.md`](docs/LEARN.md) is the study guide we use for that (TODO(lead): not written yet).
 
 Each teammate's contribution, in their own words:
 
