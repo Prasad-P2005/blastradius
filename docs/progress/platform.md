@@ -18,13 +18,12 @@ Owner: platform workstream (`apps/mcp`, infra, CI, README + docs).
 
 - **Graph request #2 (embedding model download) handled:** `apps/mcp/scripts/fetch-model.sh` (`pnpm --filter @blastradius/mcp fetch-model`) curls config/tokenizer/`onnx/model.onnx` into `$HF_CACHE_DIR/Xenova/all-MiniLM-L6-v2/` with retries and is idempotent. I tested it on the warm repo cache (skips) and on a fresh dir (86 MB downloaded). The Dockerfile `model` stage bakes it into `/opt/hf` (`HF_CACHE_DIR=/opt/hf`; `--build-arg FETCH_MODEL=false` opts out). The compose hf-cache volume was removed. **Verified:** `docker run --network none -e EMBEDDINGS=model blastradius-mcp:local` → `embeddingBackend()=model`, 384-dim unit vector, with no network. CI and render.yaml use `EMBEDDINGS=hash` consistently. README, DEPLOY and .env.example now say: never mix backends in one graph; reload with `pnpm graph:load` if the backend changes. (Graph owns `docs/requests/graph.md`, so the status flip there is theirs or the lead's.)
 
-## In progress
-- Waiting for `pnpm graph:load` (ingest `load` CLI) and `pnpm smoke` to exist, so I can dry-run the CI sequence and the compose `seed` service.
+- **CI dry-run, local, full sequence** (graph namespace `ci`, separate database `blastradius_ci`, `EMBEDDINGS=hash`, `AGENT_MODE=scripted`): `pnpm install --frozen-lockfile --offline` ok; `pnpm typecheck` exit 0; `pnpm test` exit 0 (103 unit tests across 6 packages); `pnpm db:migrate` ok; `pnpm graph:load` ok (acme 1100/5368, globex 1362/6784); `pnpm smoke` (234 checks passed); graph `test:integration` 24/24; MCP background start + `/health` + curl initialize/tools/list (blast_radius present, record_finding hidden) ok; MCP `test:integration` 8/8. The only differences from GitHub Actions are the ports (6380/5434 here vs 6379/5432 there) and the namespace. GitHub Actions itself was **not** run.
+- **Compose `seed` verified** with `docker compose --profile app build seed` + `BLASTRADIUS_GRAPH_NAMESPACE=compose docker compose --profile app run --rm --no-deps seed`: migrate + load inside the container with **model** embeddings (baked) succeeded. The running falkordb/postgres containers were untouched (still "Up 5 hours"). Test graphs and the `blastradius_ci` database were deleted afterwards.
+- **Not verified:** a full `docker compose --profile app up` (it would attach to the shared falkordb/postgres; skipped on purpose), and the `mcp` + `web` compose services as compose services (each image *was* run by hand on the same network, see above).
 
-## Next
-- Re-run the MCP int test once graph tools and data land (`critical_services` must return rows).
-- Re-read graph/data/agents/web code + progress logs; update README/ARCHITECTURE/DEMO with real names, scenario ids, commands; grep `process.env.` for `.env.example`.
-- Dry-run the CI sequence locally (`db:migrate` → `graph:load` → `smoke` → graph `test:integration` → MCP).
+## In progress
+- Final docs pass: re-reading the other workstreams' code + progress, updating README / ARCHITECTURE / DEMO, `.env.example`.
 
 ## Blockers
-- None (graph tools are stubs for now; that's expected).
+- None.
