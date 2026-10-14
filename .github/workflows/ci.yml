@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # onnxruntime-node otherwise downloads CUDA libraries on linux/x64 during install; we only use the CPU.
+  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Unit tests + typecheck. No databases, no API keys.
+  check:
+    name: Typecheck and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+        env:
+          EMBEDDINGS: hash
+
+  # End-to-end against real FalkorDB + Postgres service containers, scripted
+  # agents (no API key), hashed embeddings (no model download).
+  integration:
+    name: Integration (FalkorDB + Postgres)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      falkordb:
+        image: falkordb/falkordb:latest
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli PING"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: blast
+          POSTGRES_PASSWORD: blast
+          POSTGRES_DB: blastradius
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U blast -d blastradius"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      FALKORDB_URL: redis://localhost:6379
+      DATABASE_URL: postgres://blast:blast@localhost:5432/blastradius
+      EMBEDDINGS: hash
+      AGENT_MODE: scripted
+      MCP_PORT: 3333
+      MCP_ALLOW_WRITES: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Migrate Postgres
+        run: pnpm db:migrate
+      - name: Load snapshots into FalkorDB
+        run: pnpm graph:load
+      - name: Scripted smoke run (all scenarios)
+        run: pnpm smoke
+      - name: Graph integration tests
+        run: pnpm --filter @blastradius/graph test:integration
+
+      - name: Start MCP server (HTTP)
+        run: |
+          nohup pnpm --filter @blastradius/mcp start > mcp.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3333/health; then echo; exit 0; fi
+            sleep 1
+          done
+          echo "MCP server did not become healthy"; cat mcp.log; exit 1
+
+      - name: MCP tools/list over Streamable HTTP
+        run: |
+          set -euo pipefail
+          H=(-H 'content-type: application/json' -H 'accept: application/json, text/event-stream')
+          # 1) initialize; the server returns the session id in the mcp-session-id header
+          SID=$(curl -sS -D - -o /dev/null "${H[@]}" http://localhost:3333/mcp \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | awk 'tolower($1)=="mcp-session-id:" {print $2}' | tr -d '\r')
+          test -n "$SID"
+          curl -sS "${H[@]}" -H "mcp-session-id: $SID" http://localhost:3333/mcp \
+            -d '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+          # 2) tools/list; must include blast_radius and must NOT include record_finding (writes disabled)
+          OUT=$(curl -sS "${H[@]}" -H "mcp-session-id: $SID" http://localhost:3333/mcp \
+            -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}')
+          echo "$OUT" | head -c 2000; echo
+          echo "$OUT" | grep -q '"blast_radius"'
+          if echo "$OUT" | grep -q '"record_finding"'; then echo "record_finding exposed with writes disabled"; exit 1; fi
+
+      - name: MCP integration test
+        run: pnpm --filter @blastradius/mcp test:integration
+
+      - name: MCP server log
+        if: always()
+        run: cat mcp.log || true

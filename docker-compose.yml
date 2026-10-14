@@ -3,6 +3,12 @@
 #   FALKORDB_PORT (default 6380) -> container 6379
 #   FALKORDB_UI_PORT (default 3001) -> FalkorDB browser (container 3000; Next.js owns 3000)
 #   POSTGRES_PORT (default 5434) -> container 5432
+#
+# Default: `docker compose up -d` starts only FalkorDB + Postgres (for `pnpm dev`).
+# Full stack in containers: `docker compose --profile app up --build`
+#   seed (one-shot: db:migrate + graph:load) -> mcp (:MCP_PORT, default 3333) + web (:WEB_PORT, default 3000)
+# The app containers reach the databases by service name (falkordb:6379,
+# postgres:5432), not via the host ports.
 services:
   falkordb:
     image: falkordb/falkordb:latest
@@ -33,6 +39,76 @@ services:
       timeout: 3s
       retries: 20
 
+  # ── app profile ─────────────────────────────────────────────────────────────
+  # One-shot: apply Postgres migrations, then load data/*.json into FalkorDB
+  # (one graph per tenant, embeddings computed in-container).
+  seed:
+    profiles: ["app"]
+    build: { context: ., target: mcp }
+    image: blastradius-mcp:local
+    command: ["pnpm", "seed"]
+    environment: &app-env
+      FALKORDB_URL: redis://falkordb:6379
+      FALKORDB_PASSWORD: ${FALKORDB_PASSWORD:-}
+      DATABASE_URL: postgres://blast:blast@postgres:5432/blastradius
+      AGENT_MODE: ${AGENT_MODE:-auto}
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      LLM_MODEL: ${LLM_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AGENT_TOOL_TRANSPORT: ${AGENT_TOOL_TRANSPORT:-direct}
+      MCP_URL: http://mcp:3333/mcp
+      MCP_ALLOW_WRITES: ${MCP_ALLOW_WRITES:-false}
+      # model = MiniLM via onnxruntime (downloads ~90 MB once into the hf-cache volume); hash = offline fallback
+      EMBEDDINGS: ${EMBEDDINGS:-model}
+      HF_CACHE_DIR: /app/.cache/hf
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_SANDBOX_REPO: ${GITHUB_SANDBOX_REPO:-}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      WEBHOOK_KIND: ${WEBHOOK_KIND:-slack}
+    volumes:
+      - hf-cache:/app/.cache/hf
+    depends_on:
+      falkordb: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  # MCP server (Streamable HTTP at http://localhost:${MCP_PORT}/mcp)
+  mcp:
+    profiles: ["app"]
+    image: blastradius-mcp:local
+    build: { context: ., target: mcp }
+    environment:
+      <<: *app-env
+      MCP_PORT: "3333"
+    ports:
+      - "${MCP_PORT:-3333}:3333"
+    volumes:
+      - hf-cache:/app/.cache/hf
+    depends_on:
+      seed: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3333/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Next.js console (http://localhost:${WEB_PORT}/)
+  web:
+    profiles: ["app"]
+    image: blastradius-web:local
+    build: { context: ., target: web }
+    environment:
+      <<: *app-env
+      PORT: "3000"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - hf-cache:/app/.cache/hf
+    depends_on:
+      seed: { condition: service_completed_successfully }
+
 volumes:
   falkordb-data:
   pg-data:
+  hf-cache:

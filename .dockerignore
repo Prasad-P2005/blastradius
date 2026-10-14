@@ -1,0 +1,18 @@
+# Keep the build context small and secret-free.
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+.git
+.github
+.cache
+.env
+.env.*
+!.env.example
+.DS_Store
+.turbo
+test-results
+playwright-report
+docs/media

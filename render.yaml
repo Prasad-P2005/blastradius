@@ -1,0 +1,76 @@
+# Render Blueprint for Blastradius: the Next.js console and the MCP server,
+# both built from the repo Dockerfile. The databases are external:
+#   FalkorDB Cloud  -> FALKORDB_URL / FALKORDB_PASSWORD
+#   Neon or Render Postgres -> DATABASE_URL
+# Secrets use `sync: false`: Render asks for them when you create the Blueprint.
+# See docs/DEPLOY.md for the full walkthrough (and what is unverified).
+services:
+  - type: web
+    name: blastradius-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # The last Dockerfile stage is `web`, so no build target is needed here.
+    plan: starter
+    healthCheckPath: /api/health
+    # Applies Drizzle migrations to Postgres before each deploy (pre-deploy
+    # commands need a paid instance type on Render).
+    preDeployCommand: pnpm db:migrate
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: FALKORDB_URL
+        sync: false
+      - key: FALKORDB_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: AGENT_MODE
+        value: auto
+      - key: LLM_PROVIDER
+        value: anthropic
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AGENT_TOOL_TRANSPORT
+        value: direct
+      # Hashed embeddings avoid a model download on every cold start. Use
+      # `model` if the instance has a persistent disk for HF_CACHE_DIR, and
+      # seed the graph with the SAME backend you serve with.
+      - key: EMBEDDINGS
+        value: hash
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_SANDBOX_REPO
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: WEBHOOK_KIND
+        value: slack
+
+  - type: web
+    name: blastradius-mcp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Same image as the web service; run the MCP server instead of Next.js.
+    dockerCommand: pnpm --filter @blastradius/mcp start
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "3333"
+      - key: MCP_PORT
+        value: "3333"
+      - key: MCP_HOST
+        value: 0.0.0.0
+      # Public endpoint: keep graph writes off.
+      - key: MCP_ALLOW_WRITES
+        value: "false"
+      - key: FALKORDB_URL
+        sync: false
+      - key: FALKORDB_PASSWORD
+        sync: false
+      - key: EMBEDDINGS
+        value: hash

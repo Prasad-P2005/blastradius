@@ -1,0 +1,27 @@
+{
+  "name": "@blastradius/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "stdio": "tsx src/main.ts --stdio",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests --exclude '**/*.int.test.ts'",
+    "test:integration": "vitest run int.test"
+  },
+  "dependencies": {
+    "@blastradius/graph": "workspace:*",
+    "@blastradius/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.7"
+  }
+}
