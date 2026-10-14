@@ -44,6 +44,8 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
     if (e instanceof HttpError) return fail(e.status, e.message);
     if (e instanceof z.ZodError) return fail(400, errorMessage(e));
     if (isUnavailable(e)) return fail(503, `backend unavailable: ${errorMessage(e)}`);
+    // FalkorDB answers this when the tenant's graph key doesn't exist yet (data not loaded).
+    if (/empty key/i.test(errorMessage(e))) return fail(503, `tenant graph not loaded (run \`pnpm seed\`): ${errorMessage(e)}`);
     console.error("[web] route error:", e);
     return fail(500, errorMessage(e));
   }

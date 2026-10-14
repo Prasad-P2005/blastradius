@@ -7,6 +7,8 @@ loadRootEnv();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Lets `next build` run next to a running `next dev` (verification, CI) without clobbering .next.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   devIndicators: false,
   // Workspace packages are consumed as TypeScript source.
   transpilePackages: ["@blastradius/shared", "@blastradius/graph", "@blastradius/agents", "@blastradius/db"],
