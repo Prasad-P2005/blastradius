@@ -294,7 +294,9 @@ export function Console() {
   const agentMode = latest?.agentMode ?? health?.agentMode ?? null;
   const model = latest?.agentMode ? latest.model : health?.model;
   const falkorDown = health ? !health.falkordb.ok : false;
-  const canClose = !!latest && latest.mode === "incident" && latest.status === "ok" && !!latest.runId && !closedRuns.has(latest.runId) && !streaming;
+  const sessionClosed = sessions.find((s) => s.sessionId === sessionId)?.status === "closed";
+  const canClose =
+    !!latest && latest.mode === "incident" && latest.status === "ok" && !!latest.runId && !closedRuns.has(latest.runId) && !sessionClosed && !streaming;
   const closeInitial = useMemo(() => (canClose && latest ? prefillClose(latest) : null), [canClose, latest]);
 
   return (

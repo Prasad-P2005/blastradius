@@ -269,7 +269,7 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
           }
 
           // labels: services/teams always (when not too zoomed out), others when highlighted/hovered
-          const important = g.label === "Service" || g.label === "Team" || g.label === "Session" || (compact === true && (g.label === "Agent" || g.label === "Episode"));
+          const important = compact ? g.label === "Session" || g.label === "Agent" : g.label === "Service" || g.label === "Team" || g.label === "Session";
           // Labels: keep the canvas readable with 80+ involved nodes. Focused/hovered always,
           // services/teams when not zoomed far out, other involved nodes once zoomed in a bit.
           const show =

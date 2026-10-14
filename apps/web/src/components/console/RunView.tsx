@@ -206,7 +206,7 @@ function AgentCard({ run, agent, cb }: { run: RunState; agent: AgentView; cb: Ru
       {agent.handoffs.map((h) => (
         <div key={`${h.findingId}-${h.to}`} className="animate-slide-in mx-3 mb-2 flex items-center gap-2 rounded border border-dashed border-line-2 px-2 py-1 text-xs">
           <span className="font-mono text-accent">→</span>
-          <span className="text-fg-2">
+          <span className="shrink-0 whitespace-nowrap text-fg-2">
             handed to <span className="font-medium" style={{ color: AGENT_ACCENT[h.to] }}>{AGENT_INFO[h.to]?.title ?? h.to}</span>
           </span>
           <span className="truncate text-faint" title={h.note}>

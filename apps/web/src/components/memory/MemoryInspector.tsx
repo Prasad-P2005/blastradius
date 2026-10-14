@@ -230,7 +230,7 @@ export function MemoryInspector() {
             <SectionTitle>Procedural memory · incidents + runbooks</SectionTitle>
             {data && data.procedural.length === 0 && <div className="text-xs text-faint">No incidents recorded.</div>}
             <div className="flex flex-col gap-3">
-              {data?.procedural.map((p) => (
+              {sortProcedural(data?.procedural ?? [], sess?.episodes ?? []).map((p) => (
                 <div key={p.service}>
                   <div className="mb-1">
                     <UidPill uid={p.service} />
@@ -285,6 +285,19 @@ export function MemoryInspector() {
       </div>
     </div>
   );
+}
+
+/**
+ * Services with incidents LEARNED in a session (written by the Scribe) first, then services
+ * the selected session's findings are about, then the rest. Learned incidents first within each.
+ */
+function sortProcedural(list: MemoryInspectorData["procedural"], episodes: EpisodeView[]): MemoryInspectorData["procedural"] {
+  const sessionServices = new Set(episodes.flatMap((e) => e.findings.flatMap((f) => f.about)).filter((u) => u.startsWith("Service:")));
+  const learned = (p: MemoryInspectorData["procedural"][number]) => p.incidents.some((i) => i.sessionId);
+  const rank = (p: MemoryInspectorData["procedural"][number]) => (learned(p) ? 0 : sessionServices.has(p.service) ? 1 : 2);
+  return [...list]
+    .sort((a, b) => rank(a) - rank(b))
+    .map((p) => ({ ...p, incidents: [...p.incidents].sort((a, b) => Number(!!b.sessionId) - Number(!!a.sessionId)) }));
 }
 
 function MemoryLegend() {
@@ -347,7 +360,7 @@ function EpisodeRow({ ep, first, last, onUid }: { ep: EpisodeView; first: boolea
           {ep.seq}
         </span>
       </div>
-      <div className={cx("pb-2", !last && "relative")}>
+      <div className={cx("min-w-0 pb-2", !last && "relative")}>
         <div className="rounded-md border border-line bg-panel px-2.5 py-1.5">
           <div className="flex items-center gap-2">
             <AgentTag name={ep.agent} />
@@ -392,15 +405,20 @@ function FindingMini({ f, onUid }: { f: Finding; onUid: (u: string) => void }) {
       </div>
       <div className="mt-1 text-xs text-fg">{f.claim}</div>
       <div className="mt-1 flex flex-wrap items-center gap-1">
-        {f.about.map((u) => (
+        {f.about.slice(0, 8).map((u) => (
           <UidPill key={`a${u}`} uid={u} size="xs" onClick={onUid} />
         ))}
+        {f.about.length > 8 && <span className="font-mono text-[10px] text-faint">+{f.about.length - 8}</span>}
         {f.evidence.filter((u) => !f.about.includes(u)).length > 0 && <span className="font-mono text-[10px] text-faint">SUPPORTED_BY</span>}
         {f.evidence
           .filter((u) => !f.about.includes(u))
+          .slice(0, 8)
           .map((u) => (
             <UidPill key={`e${u}`} uid={u} size="xs" onClick={onUid} />
           ))}
+        {f.evidence.filter((u) => !f.about.includes(u)).length > 8 && (
+          <span className="font-mono text-[10px] text-faint">+{f.evidence.filter((u) => !f.about.includes(u)).length - 8}</span>
+        )}
       </div>
       {open && (
         <div className="mt-1.5 flex flex-col gap-1.5">
