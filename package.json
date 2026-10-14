@@ -1,0 +1,26 @@
+{
+  "name": "blastradius",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @blastradius/web dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "db:migrate": "pnpm --filter @blastradius/db migrate",
+    "data:build": "pnpm --filter @blastradius/ingest data:build",
+    "graph:load": "pnpm --filter @blastradius/ingest load",
+    "seed": "pnpm db:migrate && pnpm graph:load",
+    "smoke": "pnpm --filter @blastradius/agents smoke",
+    "concurrency": "pnpm --filter @blastradius/agents concurrency",
+    "mcp": "pnpm --filter @blastradius/mcp start"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.7"
+  }
+}
