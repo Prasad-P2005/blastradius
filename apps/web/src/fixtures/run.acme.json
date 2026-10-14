@@ -1,0 +1,2016 @@
+[
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 0,
+    "ts": "2025-09-30T09:14:00.120Z",
+    "type": "run_started",
+    "mode": "incident",
+    "agentMode": "scripted",
+    "question": "checkout 5xx at 12%",
+    "scenarioId": "acme-checkout-5xx",
+    "service": "Service:checkout"
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 1,
+    "ts": "2025-09-30T09:14:00.180Z",
+    "type": "memory_recalled",
+    "memories": [
+      {
+        "kind": "incident",
+        "uid": "Incident:INC-2025-031",
+        "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+        "summary": "Kafka producer buffer filled; checkout PlaceOrder blocked and returned 503s for 2 hours.",
+        "runbook": {
+          "uid": "Runbook:checkout-kafka-backpressure",
+          "title": "Checkout: Kafka producer backpressure",
+          "steps": [
+            "Check checkout logs for 'kafka: producer buffer full' and order publish latency",
+            "Scale kafka brokers or raise queue.buffering.max.messages",
+            "If a recent checkout PR changed the producer, roll it back",
+            "Confirm 5xx rate on frontend drops below 1% within 10 minutes"
+          ]
+        },
+        "path": {
+          "nodes": [
+            {
+              "id": "Incident:INC-2025-031",
+              "label": "Incident",
+              "name": "Checkout 5xx after Kafka producer blocked on full buffer",
+              "props": {
+                "key": "INC-2025-031",
+                "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+                "severity": "SEV2",
+                "status": "resolved",
+                "startedAt": 1719820800000,
+                "resolvedAt": 1719828000000,
+                "synthetic": true
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Incident:INC-2025-031-AFFECTED->Service:checkout",
+              "source": "Incident:INC-2025-031",
+              "target": "Service:checkout",
+              "type": "AFFECTED",
+              "props": {}
+            }
+          ]
+        },
+        "createdAt": "2025-07-01T10:00:00.000Z"
+      },
+      {
+        "kind": "finding",
+        "uid": "Finding:f_7h2kq1",
+        "title": "checkout errors correlate with Kafka publish latency",
+        "summary": "checkout errors correlate with Kafka publish latency (p99 2.4s)",
+        "sessionId": "s_prev_0912",
+        "agent": "investigator",
+        "path": {
+          "nodes": [
+            {
+              "id": "Finding:f_7h2kq1",
+              "label": "Finding",
+              "name": "checkout errors correlate with Kafka publish latency",
+              "props": {
+                "claim": "checkout errors correlate with Kafka publish latency",
+                "sessionId": "s_prev_0912",
+                "agent": "investigator"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Finding:f_7h2kq1-ABOUT->Service:checkout",
+              "source": "Finding:f_7h2kq1",
+              "target": "Service:checkout",
+              "type": "ABOUT",
+              "props": {}
+            }
+          ]
+        },
+        "createdAt": "2025-09-12T08:31:00.000Z"
+      }
+    ],
+    "result": {
+      "tool": "recall_memory",
+      "tenant": "acme",
+      "cypher": "// recall_memory: findings from OTHER sessions about the service, plus resolved incidents with runbooks\nMATCH (s:Service {uid: $service})\nOPTIONAL MATCH p1 = (f:Finding)-[:ABOUT]->(s)\nWHERE f.sessionId <> $sessionId\nWITH s, collect({node: f, path: p1})[..$limit] AS findings\nOPTIONAL MATCH p2 = (i:Incident {status: 'resolved'})-[:AFFECTED]->(s)\nOPTIONAL MATCH (i)-[:RESOLVED_BY]->(r:Runbook)\nRETURN findings, collect({incident: i, runbook: r, path: p2})[..$limit] AS incidents",
+      "params": {
+        "service": "Service:checkout",
+        "sessionId": "s_acme_demo01",
+        "limit": 5
+      },
+      "rows": [
+        {
+          "kind": "incident",
+          "uid": "Incident:INC-2025-031",
+          "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+          "summary": "Kafka producer buffer filled; checkout PlaceOrder blocked and returned 503s.",
+          "sessionId": null,
+          "agent": null,
+          "runbook": "Runbook:checkout-kafka-backpressure",
+          "similarity": null
+        },
+        {
+          "kind": "finding",
+          "uid": "Finding:f_7h2kq1",
+          "title": "checkout errors correlate with Kafka publish latency",
+          "summary": "checkout errors correlate with Kafka publish latency (p99 2.4s)",
+          "sessionId": "s_prev_0912",
+          "agent": "investigator",
+          "runbook": null,
+          "similarity": null
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Incident:INC-2025-031",
+              "label": "Incident",
+              "name": "Checkout 5xx after Kafka producer blocked on full buffer",
+              "props": {
+                "key": "INC-2025-031",
+                "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+                "severity": "SEV2",
+                "status": "resolved",
+                "startedAt": 1719820800000,
+                "resolvedAt": 1719828000000,
+                "synthetic": true
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Incident:INC-2025-031-AFFECTED->Service:checkout",
+              "source": "Incident:INC-2025-031",
+              "target": "Service:checkout",
+              "type": "AFFECTED",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Finding:f_7h2kq1",
+              "label": "Finding",
+              "name": "checkout errors correlate with Kafka publish latency",
+              "props": {
+                "claim": "checkout errors correlate with Kafka publish latency",
+                "sessionId": "s_prev_0912",
+                "agent": "investigator"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Finding:f_7h2kq1-ABOUT->Service:checkout",
+              "source": "Finding:f_7h2kq1",
+              "target": "Service:checkout",
+              "type": "ABOUT",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "1 resolved incident with a runbook and 1 finding from an earlier session about checkout",
+      "ms": 14
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 2,
+    "ts": "2025-09-30T09:14:00.300Z",
+    "type": "agent_started",
+    "agent": "triage",
+    "goal": "Scope the blast radius of checkout failing."
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 3,
+    "ts": "2025-09-30T09:14:00.420Z",
+    "type": "tool_call",
+    "agent": "triage",
+    "callId": "c_01",
+    "tool": "blast_radius",
+    "input": {
+      "service": "Service:checkout",
+      "maxHops": 3,
+      "direction": "dependents"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 4,
+    "ts": "2025-09-30T09:14:00.620Z",
+    "type": "tool_result",
+    "agent": "triage",
+    "callId": "c_01",
+    "tool": "blast_radius",
+    "result": {
+      "tool": "blast_radius",
+      "tenant": "acme",
+      "cypher": "// blast_radius: who breaks if this service fails? (callers of callers, up to $maxHops)\nMATCH p = (dep:Service)-[:DEPENDS_ON*1..3]->(s:Service {uid: $service})\nWITH dep, min(length(p)) AS hops, collect(p)[0] AS p\nCALL algo.betweenness({nodeLabels: ['Service'], relationshipTypes: ['DEPENDS_ON']}) YIELD node, score\nWHERE node = dep\nOPTIONAL MATCH (t:Team)-[:OWNS]->(dep)\nRETURN dep.uid AS service, dep.name AS name, hops, score AS betweenness, dep.tier AS tier, t.uid AS team, p\nORDER BY betweenness DESC, hops ASC",
+      "params": {
+        "service": "Service:checkout",
+        "maxHops": 3,
+        "direction": "dependents"
+      },
+      "rows": [
+        {
+          "service": "Service:frontend",
+          "name": "frontend",
+          "hops": 1,
+          "betweenness": 0.42,
+          "tier": 1,
+          "team": "Team:storefront"
+        },
+        {
+          "service": "Service:frontend-proxy",
+          "name": "frontend-proxy",
+          "hops": 2,
+          "betweenness": 0.18,
+          "tier": 1,
+          "team": "Team:storefront"
+        },
+        {
+          "service": "Service:load-generator",
+          "name": "load-generator",
+          "hops": 3,
+          "betweenness": 0,
+          "tier": 3,
+          "team": null
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Service:frontend",
+              "label": "Service",
+              "name": "frontend",
+              "props": {
+                "name": "frontend",
+                "slug": "frontend",
+                "synthetic": false,
+                "language": "typescript",
+                "kind": "frontend",
+                "tier": 1,
+                "repoPath": "src/frontend"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Service:frontend-DEPENDS_ON->Service:checkout",
+              "source": "Service:frontend",
+              "target": "Service:checkout",
+              "type": "DEPENDS_ON",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Service:frontend-proxy",
+              "label": "Service",
+              "name": "frontend-proxy",
+              "props": {
+                "name": "frontend-proxy",
+                "slug": "frontend-proxy",
+                "synthetic": false,
+                "language": "envoy",
+                "kind": "proxy",
+                "tier": 1,
+                "repoPath": "src/frontend-proxy"
+              }
+            },
+            {
+              "id": "Service:frontend",
+              "label": "Service",
+              "name": "frontend",
+              "props": {
+                "name": "frontend",
+                "slug": "frontend",
+                "synthetic": false,
+                "language": "typescript",
+                "kind": "frontend",
+                "tier": 1,
+                "repoPath": "src/frontend"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Service:frontend-proxy-DEPENDS_ON->Service:frontend",
+              "source": "Service:frontend-proxy",
+              "target": "Service:frontend",
+              "type": "DEPENDS_ON",
+              "props": {}
+            },
+            {
+              "id": "Service:frontend-DEPENDS_ON->Service:checkout",
+              "source": "Service:frontend",
+              "target": "Service:checkout",
+              "type": "DEPENDS_ON",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Service:load-generator",
+              "label": "Service",
+              "name": "load-generator",
+              "props": {
+                "name": "load-generator",
+                "slug": "load-generator",
+                "synthetic": false,
+                "language": "python",
+                "kind": "tool",
+                "tier": 3,
+                "repoPath": "src/load-generator"
+              }
+            },
+            {
+              "id": "Service:frontend-proxy",
+              "label": "Service",
+              "name": "frontend-proxy",
+              "props": {
+                "name": "frontend-proxy",
+                "slug": "frontend-proxy",
+                "synthetic": false,
+                "language": "envoy",
+                "kind": "proxy",
+                "tier": 1,
+                "repoPath": "src/frontend-proxy"
+              }
+            },
+            {
+              "id": "Service:frontend",
+              "label": "Service",
+              "name": "frontend",
+              "props": {
+                "name": "frontend",
+                "slug": "frontend",
+                "synthetic": false,
+                "language": "typescript",
+                "kind": "frontend",
+                "tier": 1,
+                "repoPath": "src/frontend"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Service:load-generator-DEPENDS_ON->Service:frontend-proxy",
+              "source": "Service:load-generator",
+              "target": "Service:frontend-proxy",
+              "type": "DEPENDS_ON",
+              "props": {}
+            },
+            {
+              "id": "Service:frontend-proxy-DEPENDS_ON->Service:frontend",
+              "source": "Service:frontend-proxy",
+              "target": "Service:frontend",
+              "type": "DEPENDS_ON",
+              "props": {}
+            },
+            {
+              "id": "Service:frontend-DEPENDS_ON->Service:checkout",
+              "source": "Service:frontend",
+              "target": "Service:checkout",
+              "type": "DEPENDS_ON",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "3 services within 3 hops depend on checkout; top: frontend (betweenness 0.42)",
+      "ms": 23
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 5,
+    "ts": "2025-09-30T09:14:00.740Z",
+    "type": "tool_call",
+    "agent": "triage",
+    "callId": "c_02",
+    "tool": "critical_services",
+    "input": {
+      "limit": 5
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 6,
+    "ts": "2025-09-30T09:14:00.940Z",
+    "type": "tool_result",
+    "agent": "triage",
+    "callId": "c_02",
+    "tool": "critical_services",
+    "result": {
+      "tool": "critical_services",
+      "tenant": "acme",
+      "cypher": "// critical_services: which services are chokepoints of the dependency graph?\nCALL algo.betweenness({nodeLabels: ['Service'], relationshipTypes: ['DEPENDS_ON']}) YIELD node, score\nOPTIONAL MATCH (node)<-[:DEPENDS_ON]-(caller:Service)\nOPTIONAL MATCH (node)-[:DEPENDS_ON]->(callee:Service)\nRETURN node.uid AS service, node.name AS name, score AS betweenness,\n       count(DISTINCT caller) AS dependents, count(DISTINCT callee) AS dependencies\nORDER BY betweenness DESC\nLIMIT $limit",
+      "params": {
+        "limit": 5
+      },
+      "rows": [
+        {
+          "service": "Service:frontend",
+          "name": "frontend",
+          "betweenness": 0.42,
+          "dependents": 2,
+          "dependencies": 7
+        },
+        {
+          "service": "Service:checkout",
+          "name": "checkout",
+          "betweenness": 0.31,
+          "dependents": 1,
+          "dependencies": 7
+        },
+        {
+          "service": "Service:kafka",
+          "name": "kafka",
+          "betweenness": 0.12,
+          "dependents": 1,
+          "dependencies": 0
+        },
+        {
+          "service": "Service:cart",
+          "name": "cart",
+          "betweenness": 0.08,
+          "dependents": 2,
+          "dependencies": 1
+        },
+        {
+          "service": "Service:frontend-proxy",
+          "name": "frontend-proxy",
+          "betweenness": 0.07,
+          "dependents": 1,
+          "dependencies": 2
+        }
+      ],
+      "paths": [],
+      "summary": "frontend and checkout are the top chokepoints (betweenness 0.42, 0.31)",
+      "ms": 9
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 7,
+    "ts": "2025-09-30T09:14:01.060Z",
+    "type": "tool_call",
+    "agent": "triage",
+    "callId": "c_03",
+    "tool": "on_call",
+    "input": {
+      "service": "Service:checkout"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 8,
+    "ts": "2025-09-30T09:14:01.260Z",
+    "type": "tool_result",
+    "agent": "triage",
+    "callId": "c_03",
+    "tool": "on_call",
+    "result": {
+      "tool": "on_call",
+      "tenant": "acme",
+      "cypher": "// on_call: who holds the latest rotation week for this service?\nMATCH p = (person:Person)-[r:ON_CALL_FOR]->(s:Service {uid: $service})\nWHERE r.weekStartTs <= $at\nOPTIONAL MATCH (person)-[:MEMBER_OF]->(t:Team)\nRETURN person.uid AS person, person.name AS name, r.weekStart AS weekStart, t.uid AS team, s.uid AS service, p\nORDER BY r.weekStartTs DESC\nLIMIT 1",
+      "params": {
+        "service": "Service:checkout",
+        "at": 1727654400000
+      },
+      "rows": [
+        {
+          "person": "Person:tomas-lindqvist",
+          "name": "Tomas Lindqvist",
+          "weekStart": "2025-09-29",
+          "team": "Team:payments",
+          "service": "Service:checkout"
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Person:tomas-lindqvist",
+              "label": "Person",
+              "name": "Tomas Lindqvist",
+              "props": {
+                "name": "Tomas Lindqvist",
+                "slug": "tomas-lindqvist",
+                "isBot": false,
+                "prCount": 31,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Person:tomas-lindqvist-ON_CALL_FOR->Service:checkout#2025-09-29",
+              "source": "Person:tomas-lindqvist",
+              "target": "Service:checkout",
+              "type": "ON_CALL_FOR",
+              "props": {
+                "weekStart": "2025-09-29"
+              }
+            }
+          ]
+        }
+      ],
+      "summary": "Tomas Lindqvist is on call for checkout (week of 2025-09-29)",
+      "ms": 4
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 9,
+    "ts": "2025-09-30T09:14:01.380Z",
+    "type": "finding",
+    "agent": "triage",
+    "finding": {
+      "id": "f_a1impact",
+      "uid": "Finding:f_a1impact",
+      "sessionId": "s_acme_demo01",
+      "agent": "triage",
+      "kind": "impact",
+      "claim": "If checkout fails, frontend, frontend-proxy and load-generator break; frontend is the main chokepoint (betweenness 0.42).",
+      "confidence": 0.9,
+      "about": [
+        "Service:checkout",
+        "Service:frontend",
+        "Service:frontend-proxy"
+      ],
+      "evidence": [
+        "Service:frontend",
+        "Service:frontend-proxy",
+        "Service:load-generator"
+      ],
+      "cypher": [
+        "// blast_radius: who breaks if this service fails? (callers of callers, up to $maxHops)\nMATCH p = (dep:Service)-[:DEPENDS_ON*1..3]->(s:Service {uid: $service})\nWITH dep, min(length(p)) AS hops, collect(p)[0] AS p\nCALL algo.betweenness({nodeLabels: ['Service'], relationshipTypes: ['DEPENDS_ON']}) YIELD node, score\nWHERE node = dep\nOPTIONAL MATCH (t:Team)-[:OWNS]->(dep)\nRETURN dep.uid AS service, dep.name AS name, hops, score AS betweenness, dep.tier AS tier, t.uid AS team, p\nORDER BY betweenness DESC, hops ASC",
+        "// critical_services: which services are chokepoints of the dependency graph?\nCALL algo.betweenness({nodeLabels: ['Service'], relationshipTypes: ['DEPENDS_ON']}) YIELD node, score\nOPTIONAL MATCH (node)<-[:DEPENDS_ON]-(caller:Service)\nOPTIONAL MATCH (node)-[:DEPENDS_ON]->(callee:Service)\nRETURN node.uid AS service, node.name AS name, score AS betweenness,\n       count(DISTINCT caller) AS dependents, count(DISTINCT callee) AS dependencies\nORDER BY betweenness DESC\nLIMIT $limit"
+      ],
+      "handTo": "investigator",
+      "createdAt": "2025-09-30T09:14:01.380Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 10,
+    "ts": "2025-09-30T09:14:01.500Z",
+    "type": "handoff",
+    "from": "triage",
+    "to": "investigator",
+    "findingId": "f_a1impact",
+    "note": "3 dependents affected; frontend is the chokepoint. Look for the cause on checkout and its dependencies."
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 11,
+    "ts": "2025-09-30T09:14:01.620Z",
+    "type": "agent_finished",
+    "agent": "triage",
+    "summary": "3 services affected; frontend is the chokepoint.",
+    "findingIds": [
+      "f_a1impact"
+    ]
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 12,
+    "ts": "2025-09-30T09:14:01.740Z",
+    "type": "agent_started",
+    "agent": "investigator",
+    "goal": "Find the probable cause: recent changes and similar past incidents."
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 13,
+    "ts": "2025-09-30T09:14:01.860Z",
+    "type": "tool_call",
+    "agent": "investigator",
+    "callId": "c_04",
+    "tool": "read_handoffs",
+    "input": {}
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 14,
+    "ts": "2025-09-30T09:14:01.900Z",
+    "type": "tool_result",
+    "agent": "investigator",
+    "callId": "c_04",
+    "tool": "read_handoffs",
+    "result": {
+      "tool": "read_handoffs",
+      "tenant": "acme",
+      "cypher": "// read_handoffs: findings in this session handed to me\nMATCH (f:Finding {sessionId: $sessionId})-[:HANDED_TO]->(:Agent {name: $agent})\nMATCH (author:Agent)-[:WROTE]->(f)\nRETURN f.id AS finding, author.name AS from, f.claim AS claim, f.confidence AS confidence,\n       f.about AS about, f.evidence AS evidence, f.cypher AS cypher\nORDER BY f.createdAt",
+      "params": {
+        "sessionId": "s_acme_demo01",
+        "agent": "investigator"
+      },
+      "rows": [
+        {
+          "finding": "f_a1impact",
+          "from": "triage",
+          "claim": "If checkout fails, frontend, frontend-proxy and load-generator break; frontend is the main chokepoint (betweenness 0.42).",
+          "confidence": 0.9,
+          "about": [
+            "Service:checkout",
+            "Service:frontend",
+            "Service:frontend-proxy"
+          ],
+          "evidence": [
+            "Service:frontend",
+            "Service:frontend-proxy",
+            "Service:load-generator"
+          ],
+          "cypher": [
+            "// blast_radius: who breaks if this service fails? (callers of callers, up to $maxHops)\nMATCH p = (dep:Service)-[:DEPENDS_ON*1..3]->(s:Service {uid: $service})\nWITH dep, min(length(p)) AS hops, collect(p)[0] AS p\nCALL algo.betweenness({nodeLabels: ['Service'], relationshipTypes: ['DEPENDS_ON']}) YIELD node, score\nWHERE node = dep\nOPTIONAL MATCH (t:Team)-[:OWNS]->(dep)\nRETURN dep.uid AS service, dep.name AS name, hops, score AS betweenness, dep.tier AS tier, t.uid AS team, p\nORDER BY betweenness DESC, hops ASC",
+            "// critical_services: which services are chokepoints of the dependency graph?\nCALL algo.betweenness({nodeLabels: ['Service'], relationshipTypes: ['DEPENDS_ON']}) YIELD node, score\nOPTIONAL MATCH (node)<-[:DEPENDS_ON]-(caller:Service)\nOPTIONAL MATCH (node)-[:DEPENDS_ON]->(callee:Service)\nRETURN node.uid AS service, node.name AS name, score AS betweenness,\n       count(DISTINCT caller) AS dependents, count(DISTINCT callee) AS dependencies\nORDER BY betweenness DESC\nLIMIT $limit"
+          ]
+        }
+      ],
+      "paths": [],
+      "summary": "1 finding handed to investigator",
+      "ms": 3
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 15,
+    "ts": "2025-09-30T09:14:02.020Z",
+    "type": "tool_call",
+    "agent": "investigator",
+    "callId": "c_05",
+    "tool": "suspect_changes",
+    "input": {
+      "service": "Service:checkout"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 16,
+    "ts": "2025-09-30T09:14:02.320Z",
+    "type": "tool_result",
+    "agent": "investigator",
+    "callId": "c_05",
+    "tool": "suspect_changes",
+    "result": {
+      "tool": "suspect_changes",
+      "tenant": "acme",
+      "cypher": "// suspect_changes: recent human PRs on the service or anything it depends on\nMATCH (newest:PR) WITH max(newest.mergedAt) AS now\nMATCH p = (author:Person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(touched:Service)<-[:DEPENDS_ON*0..2]-(s:Service {uid: $service})\nWHERE pr.mergedAt >= now - $sinceDays * 86400000 AND ($includeBots OR NOT pr.isBot)\nWITH pr, author, touched, min(length(p)) - 2 AS hops, collect(p)[0] AS p\nRETURN pr.uid AS pr, pr.number AS number, pr.title AS title, pr.mergedAt AS mergedAt, author.name AS author,\n       pr.isBot AS isBot, touched.uid AS service, hops, pr.filesChanged AS files,\n       pr.additions AS additions, pr.deletions AS deletions, pr.url AS url, p\nORDER BY pr.isBot ASC, pr.mergedAt DESC\nLIMIT $limit",
+      "params": {
+        "service": "Service:checkout",
+        "sinceDays": 30,
+        "includeDependencies": true,
+        "maxHops": 2,
+        "includeBots": false,
+        "limit": 10
+      },
+      "rows": [
+        {
+          "pr": "PR:2143",
+          "number": 2143,
+          "title": "checkout: publish order events with async kafka producer",
+          "mergedAt": 1727443200000,
+          "author": "Maya Okafor",
+          "isBot": false,
+          "service": "Service:checkout",
+          "hops": 0,
+          "files": 6,
+          "additions": 214,
+          "deletions": 61,
+          "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2143"
+        },
+        {
+          "pr": "PR:2131",
+          "number": 2131,
+          "title": "checkout: bump grpc client deadline config",
+          "mergedAt": 1727097600000,
+          "author": "Tomas Lindqvist",
+          "isBot": false,
+          "service": "Service:checkout",
+          "hops": 0,
+          "files": 2,
+          "additions": 12,
+          "deletions": 4,
+          "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2131"
+        },
+        {
+          "pr": "PR:2120",
+          "number": 2120,
+          "title": "cart: retry valkey connection on startup",
+          "mergedAt": 1726838400000,
+          "author": "Priya Raman",
+          "isBot": false,
+          "service": "Service:cart",
+          "hops": 1,
+          "files": 3,
+          "additions": 58,
+          "deletions": 9,
+          "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2120"
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Person:maya-okafor",
+              "label": "Person",
+              "name": "Maya Okafor",
+              "props": {
+                "name": "Maya Okafor",
+                "slug": "maya-okafor",
+                "isBot": false,
+                "prCount": 48,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "PR:2143",
+              "label": "PR",
+              "name": "checkout: publish order events with async kafka producer",
+              "props": {
+                "number": 2143,
+                "title": "checkout: publish order events with async kafka producer",
+                "sha": "8c1f0e2a9b",
+                "mergedAt": 1727443200000,
+                "additions": 214,
+                "deletions": 61,
+                "filesChanged": 6,
+                "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2143",
+                "isBot": false,
+                "authorName": "Maya Okafor",
+                "synthetic": false
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Person:maya-okafor-AUTHORED->PR:2143",
+              "source": "Person:maya-okafor",
+              "target": "PR:2143",
+              "type": "AUTHORED",
+              "props": {}
+            },
+            {
+              "id": "PR:2143-TOUCHES->Service:checkout",
+              "source": "PR:2143",
+              "target": "Service:checkout",
+              "type": "TOUCHES",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Person:tomas-lindqvist",
+              "label": "Person",
+              "name": "Tomas Lindqvist",
+              "props": {
+                "name": "Tomas Lindqvist",
+                "slug": "tomas-lindqvist",
+                "isBot": false,
+                "prCount": 31,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "PR:2131",
+              "label": "PR",
+              "name": "checkout: bump grpc client deadline config",
+              "props": {
+                "number": 2131,
+                "title": "checkout: bump grpc client deadline config",
+                "mergedAt": 1727097600000,
+                "isBot": false,
+                "authorName": "Tomas Lindqvist",
+                "synthetic": false,
+                "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2131"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Person:tomas-lindqvist-AUTHORED->PR:2131",
+              "source": "Person:tomas-lindqvist",
+              "target": "PR:2131",
+              "type": "AUTHORED",
+              "props": {}
+            },
+            {
+              "id": "PR:2131-TOUCHES->Service:checkout",
+              "source": "PR:2131",
+              "target": "Service:checkout",
+              "type": "TOUCHES",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Person:priya-raman",
+              "label": "Person",
+              "name": "Priya Raman",
+              "props": {
+                "name": "Priya Raman",
+                "slug": "priya-raman",
+                "isBot": false,
+                "prCount": 22,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "PR:2120",
+              "label": "PR",
+              "name": "cart: retry valkey connection on startup",
+              "props": {
+                "number": 2120,
+                "title": "cart: retry valkey connection on startup",
+                "mergedAt": 1726838400000,
+                "isBot": false,
+                "authorName": "Priya Raman",
+                "synthetic": false,
+                "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2120"
+              }
+            },
+            {
+              "id": "Service:cart",
+              "label": "Service",
+              "name": "cart",
+              "props": {
+                "name": "cart",
+                "slug": "cart",
+                "synthetic": false,
+                "language": "csharp",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/cart"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Person:priya-raman-AUTHORED->PR:2120",
+              "source": "Person:priya-raman",
+              "target": "PR:2120",
+              "type": "AUTHORED",
+              "props": {}
+            },
+            {
+              "id": "PR:2120-TOUCHES->Service:cart",
+              "source": "PR:2120",
+              "target": "Service:cart",
+              "type": "TOUCHES",
+              "props": {}
+            },
+            {
+              "id": "Service:checkout-DEPENDS_ON->Service:cart",
+              "source": "Service:checkout",
+              "target": "Service:cart",
+              "type": "DEPENDS_ON",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "3 human PRs in the last 30 days touched checkout or its dependencies; newest: #2143 (2 days before the alert)",
+      "ms": 31
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 17,
+    "ts": "2025-09-30T09:14:02.440Z",
+    "type": "tool_call",
+    "agent": "investigator",
+    "callId": "c_06",
+    "tool": "similar_incidents",
+    "input": {
+      "text": "checkout 5xx at 12%",
+      "service": "Service:checkout"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 18,
+    "ts": "2025-09-30T09:14:02.790Z",
+    "type": "tool_result",
+    "agent": "investigator",
+    "callId": "c_06",
+    "tool": "similar_incidents",
+    "result": {
+      "tool": "similar_incidents",
+      "tenant": "acme",
+      "cypher": "// similar_incidents: vector search over Incident embeddings, then expand to cause, runbook, responders\nCALL db.idx.vector.queryNodes('Incident', 'embedding', $k, vecf32($vec)) YIELD node AS i, score\nOPTIONAL MATCH p1 = (i)-[:CAUSED_BY]->(pr:PR)\nOPTIONAL MATCH p2 = (i)-[:RESOLVED_BY]->(rb:Runbook)\nOPTIONAL MATCH (i)-[:AFFECTED]->(s:Service)\nOPTIONAL MATCH (i)-[:RESPONDED_BY]->(person:Person)\nRETURN i.uid AS incident, i.title AS title, score AS distance, s.uid AS service, pr.uid AS causedBy,\n       rb.uid AS runbook, collect(DISTINCT person.uid) AS responders, p1, p2\nORDER BY distance ASC",
+      "params": {
+        "text": "checkout 5xx at 12%",
+        "service": "Service:checkout",
+        "k": 5
+      },
+      "rows": [
+        {
+          "incident": "Incident:INC-2025-031",
+          "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+          "similarity": 0.81,
+          "distance": 0.19,
+          "service": "Service:checkout",
+          "causedBy": "PR:1984",
+          "runbook": "Runbook:checkout-kafka-backpressure",
+          "responders": [
+            "Person:maya-okafor",
+            "Person:tomas-lindqvist"
+          ]
+        },
+        {
+          "incident": "Incident:INC-2025-017",
+          "title": "Cart latency spike from Valkey eviction storm",
+          "similarity": 0.54,
+          "distance": 0.46,
+          "service": "Service:cart",
+          "causedBy": null,
+          "runbook": null,
+          "responders": [
+            "Person:priya-raman"
+          ]
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Incident:INC-2025-031",
+              "label": "Incident",
+              "name": "Checkout 5xx after Kafka producer blocked on full buffer",
+              "props": {
+                "key": "INC-2025-031",
+                "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+                "severity": "SEV2",
+                "status": "resolved",
+                "startedAt": 1719820800000,
+                "resolvedAt": 1719828000000,
+                "synthetic": true
+              }
+            },
+            {
+              "id": "PR:1984",
+              "label": "PR",
+              "name": "checkout: add order confirmation retry loop",
+              "props": {
+                "number": 1984,
+                "title": "checkout: add order confirmation retry loop",
+                "isBot": false,
+                "synthetic": false
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Incident:INC-2025-031-CAUSED_BY->PR:1984",
+              "source": "Incident:INC-2025-031",
+              "target": "PR:1984",
+              "type": "CAUSED_BY",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Incident:INC-2025-031",
+              "label": "Incident",
+              "name": "Checkout 5xx after Kafka producer blocked on full buffer",
+              "props": {
+                "key": "INC-2025-031",
+                "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+                "severity": "SEV2",
+                "status": "resolved",
+                "startedAt": 1719820800000,
+                "resolvedAt": 1719828000000,
+                "synthetic": true
+              }
+            },
+            {
+              "id": "Runbook:checkout-kafka-backpressure",
+              "label": "Runbook",
+              "name": "Checkout: Kafka producer backpressure",
+              "props": {
+                "title": "Checkout: Kafka producer backpressure",
+                "synthetic": true
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Incident:INC-2025-031-RESOLVED_BY->Runbook:checkout-kafka-backpressure",
+              "source": "Incident:INC-2025-031",
+              "target": "Runbook:checkout-kafka-backpressure",
+              "type": "RESOLVED_BY",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "Closest past incident: INC-2025-031 (similarity 0.81), resolved by runbook checkout-kafka-backpressure",
+      "ms": 42
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 19,
+    "ts": "2025-09-30T09:14:02.910Z",
+    "type": "tool_call",
+    "agent": "investigator",
+    "callId": "c_07",
+    "tool": "past_incidents",
+    "input": {
+      "service": "Service:checkout"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 20,
+    "ts": "2025-09-30T09:14:03.110Z",
+    "type": "tool_result",
+    "agent": "investigator",
+    "callId": "c_07",
+    "tool": "past_incidents",
+    "result": {
+      "tool": "past_incidents",
+      "tenant": "acme",
+      "cypher": "// past_incidents: incidents on the service (or a neighbour) with cause PR and resolving runbook\nMATCH (s:Service {uid: $service})\nMATCH p = (i:Incident)-[:AFFECTED]->(:Service)-[:DEPENDS_ON*0..1]-(s)\nOPTIONAL MATCH (i)-[:CAUSED_BY]->(pr:PR)\nOPTIONAL MATCH (i)-[:RESOLVED_BY]->(rb:Runbook)\nOPTIONAL MATCH (i)-[:RESPONDED_BY]->(person:Person)\nRETURN DISTINCT i.uid AS incident, i.title AS title, i.severity AS severity, i.startedAt AS startedAt,\n       s.uid AS service, pr.uid AS causedBy, rb.uid AS runbook, rb.steps AS runbookSteps,\n       collect(DISTINCT person.uid) AS responders, i.synthetic AS synthetic, i.sessionId AS sessionId, p\nORDER BY startedAt DESC\nLIMIT $limit",
+      "params": {
+        "service": "Service:checkout",
+        "includeNeighbors": true,
+        "limit": 5
+      },
+      "rows": [
+        {
+          "incident": "Incident:INC-2025-031",
+          "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+          "severity": "SEV2",
+          "startedAt": 1719820800000,
+          "service": "Service:checkout",
+          "causedBy": "PR:1984",
+          "runbook": "Runbook:checkout-kafka-backpressure",
+          "runbookSteps": [
+            "Check checkout logs for 'kafka: producer buffer full' and order publish latency",
+            "Scale kafka brokers or raise queue.buffering.max.messages",
+            "If a recent checkout PR changed the producer, roll it back",
+            "Confirm 5xx rate on frontend drops below 1% within 10 minutes"
+          ],
+          "responders": [
+            "Person:maya-okafor",
+            "Person:tomas-lindqvist"
+          ],
+          "synthetic": true,
+          "sessionId": null
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Incident:INC-2025-031",
+              "label": "Incident",
+              "name": "Checkout 5xx after Kafka producer blocked on full buffer",
+              "props": {
+                "key": "INC-2025-031",
+                "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+                "severity": "SEV2",
+                "status": "resolved",
+                "startedAt": 1719820800000,
+                "resolvedAt": 1719828000000,
+                "synthetic": true
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Incident:INC-2025-031-AFFECTED->Service:checkout",
+              "source": "Incident:INC-2025-031",
+              "target": "Service:checkout",
+              "type": "AFFECTED",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "1 past incident on checkout: INC-2025-031 (SEV2), runbook has 4 steps",
+      "ms": 11
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 21,
+    "ts": "2025-09-30T09:14:03.230Z",
+    "type": "finding",
+    "agent": "investigator",
+    "finding": {
+      "id": "f_b2cause",
+      "uid": "Finding:f_b2cause",
+      "sessionId": "s_acme_demo01",
+      "agent": "investigator",
+      "kind": "cause",
+      "claim": "PR #2143 (async Kafka producer in checkout, merged 2 days before the alert) is the most likely cause.",
+      "confidence": 0.78,
+      "about": [
+        "Service:checkout",
+        "PR:2143"
+      ],
+      "evidence": [
+        "PR:2143",
+        "Person:maya-okafor",
+        "Service:kafka"
+      ],
+      "cypher": [
+        "// suspect_changes: recent human PRs on the service or anything it depends on\nMATCH (newest:PR) WITH max(newest.mergedAt) AS now\nMATCH p = (author:Person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(touched:Service)<-[:DEPENDS_ON*0..2]-(s:Service {uid: $service})\nWHERE pr.mergedAt >= now - $sinceDays * 86400000 AND ($includeBots OR NOT pr.isBot)\nWITH pr, author, touched, min(length(p)) - 2 AS hops, collect(p)[0] AS p\nRETURN pr.uid AS pr, pr.number AS number, pr.title AS title, pr.mergedAt AS mergedAt, author.name AS author,\n       pr.isBot AS isBot, touched.uid AS service, hops, pr.filesChanged AS files,\n       pr.additions AS additions, pr.deletions AS deletions, pr.url AS url, p\nORDER BY pr.isBot ASC, pr.mergedAt DESC\nLIMIT $limit"
+      ],
+      "handTo": "expert",
+      "createdAt": "2025-09-30T09:14:03.230Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 22,
+    "ts": "2025-09-30T09:14:03.350Z",
+    "type": "handoff",
+    "from": "investigator",
+    "to": "expert",
+    "findingId": "f_b2cause",
+    "note": "Suspect PR #2143 by Maya Okafor. Who can fix it?"
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 23,
+    "ts": "2025-09-30T09:14:03.470Z",
+    "type": "finding",
+    "agent": "investigator",
+    "finding": {
+      "id": "f_b3preced",
+      "uid": "Finding:f_b3preced",
+      "sessionId": "s_acme_demo01",
+      "agent": "investigator",
+      "kind": "precedent",
+      "claim": "This matches INC-2025-031 (similarity 0.81): Kafka producer backpressure blocked checkout; runbook checkout-kafka-backpressure resolved it.",
+      "confidence": 0.81,
+      "about": [
+        "Service:checkout",
+        "Incident:INC-2025-031"
+      ],
+      "evidence": [
+        "Incident:INC-2025-031",
+        "Runbook:checkout-kafka-backpressure",
+        "PR:1984"
+      ],
+      "cypher": [
+        "// similar_incidents: vector search over Incident embeddings, then expand to cause, runbook, responders\nCALL db.idx.vector.queryNodes('Incident', 'embedding', $k, vecf32($vec)) YIELD node AS i, score\nOPTIONAL MATCH p1 = (i)-[:CAUSED_BY]->(pr:PR)\nOPTIONAL MATCH p2 = (i)-[:RESOLVED_BY]->(rb:Runbook)\nOPTIONAL MATCH (i)-[:AFFECTED]->(s:Service)\nOPTIONAL MATCH (i)-[:RESPONDED_BY]->(person:Person)\nRETURN i.uid AS incident, i.title AS title, score AS distance, s.uid AS service, pr.uid AS causedBy,\n       rb.uid AS runbook, collect(DISTINCT person.uid) AS responders, p1, p2\nORDER BY distance ASC",
+        "// past_incidents: incidents on the service (or a neighbour) with cause PR and resolving runbook\nMATCH (s:Service {uid: $service})\nMATCH p = (i:Incident)-[:AFFECTED]->(:Service)-[:DEPENDS_ON*0..1]-(s)\nOPTIONAL MATCH (i)-[:CAUSED_BY]->(pr:PR)\nOPTIONAL MATCH (i)-[:RESOLVED_BY]->(rb:Runbook)\nOPTIONAL MATCH (i)-[:RESPONDED_BY]->(person:Person)\nRETURN DISTINCT i.uid AS incident, i.title AS title, i.severity AS severity, i.startedAt AS startedAt,\n       s.uid AS service, pr.uid AS causedBy, rb.uid AS runbook, rb.steps AS runbookSteps,\n       collect(DISTINCT person.uid) AS responders, i.synthetic AS synthetic, i.sessionId AS sessionId, p\nORDER BY startedAt DESC\nLIMIT $limit"
+      ],
+      "handTo": "scribe",
+      "createdAt": "2025-09-30T09:14:03.470Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 24,
+    "ts": "2025-09-30T09:14:03.590Z",
+    "type": "handoff",
+    "from": "investigator",
+    "to": "scribe",
+    "findingId": "f_b3preced",
+    "note": "Precedent INC-2025-031 with a runbook, for the summary."
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 25,
+    "ts": "2025-09-30T09:14:03.710Z",
+    "type": "agent_finished",
+    "agent": "investigator",
+    "summary": "Suspect PR #2143; precedent INC-2025-031.",
+    "findingIds": [
+      "f_b2cause",
+      "f_b3preced"
+    ]
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 26,
+    "ts": "2025-09-30T09:14:03.830Z",
+    "type": "agent_started",
+    "agent": "expert",
+    "goal": "Find who can fix it: authorship PageRank, team and on-call."
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 27,
+    "ts": "2025-09-30T09:14:03.950Z",
+    "type": "tool_call",
+    "agent": "expert",
+    "callId": "c_08",
+    "tool": "read_handoffs",
+    "input": {}
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 28,
+    "ts": "2025-09-30T09:14:03.990Z",
+    "type": "tool_result",
+    "agent": "expert",
+    "callId": "c_08",
+    "tool": "read_handoffs",
+    "result": {
+      "tool": "read_handoffs",
+      "tenant": "acme",
+      "cypher": "// read_handoffs: findings in this session handed to me\nMATCH (f:Finding {sessionId: $sessionId})-[:HANDED_TO]->(:Agent {name: $agent})\nMATCH (author:Agent)-[:WROTE]->(f)\nRETURN f.id AS finding, author.name AS from, f.claim AS claim, f.confidence AS confidence,\n       f.about AS about, f.evidence AS evidence, f.cypher AS cypher\nORDER BY f.createdAt",
+      "params": {
+        "sessionId": "s_acme_demo01",
+        "agent": "expert"
+      },
+      "rows": [
+        {
+          "finding": "f_b2cause",
+          "from": "investigator",
+          "claim": "PR #2143 (async Kafka producer in checkout, merged 2 days before the alert) is the most likely cause.",
+          "confidence": 0.78,
+          "about": [
+            "Service:checkout",
+            "PR:2143"
+          ],
+          "evidence": [
+            "PR:2143",
+            "Person:maya-okafor",
+            "Service:kafka"
+          ],
+          "cypher": [
+            "// suspect_changes: recent human PRs on the service or anything it depends on\nMATCH (newest:PR) WITH max(newest.mergedAt) AS now\nMATCH p = (author:Person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(touched:Service)<-[:DEPENDS_ON*0..2]-(s:Service {uid: $service})\nWHERE pr.mergedAt >= now - $sinceDays * 86400000 AND ($includeBots OR NOT pr.isBot)\nWITH pr, author, touched, min(length(p)) - 2 AS hops, collect(p)[0] AS p\nRETURN pr.uid AS pr, pr.number AS number, pr.title AS title, pr.mergedAt AS mergedAt, author.name AS author,\n       pr.isBot AS isBot, touched.uid AS service, hops, pr.filesChanged AS files,\n       pr.additions AS additions, pr.deletions AS deletions, pr.url AS url, p\nORDER BY pr.isBot ASC, pr.mergedAt DESC\nLIMIT $limit"
+          ]
+        }
+      ],
+      "paths": [],
+      "summary": "1 finding handed to expert",
+      "ms": 3
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 29,
+    "ts": "2025-09-30T09:14:04.110Z",
+    "type": "tool_call",
+    "agent": "expert",
+    "callId": "c_09",
+    "tool": "who_knows",
+    "input": {
+      "service": "Service:checkout"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 30,
+    "ts": "2025-09-30T09:14:04.370Z",
+    "type": "tool_result",
+    "agent": "expert",
+    "callId": "c_09",
+    "tool": "who_knows",
+    "result": {
+      "tool": "who_knows",
+      "tenant": "acme",
+      "cypher": "// who_knows: PageRank over authorship, weighted by activity on this service; bots excluded\nCALL algo.pageRank('Person', 'AUTHORED') YIELD node AS person, score AS rank\nWHERE NOT person.isBot\nMATCH p = (person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(s:Service {uid: $service})\nWITH person, rank, count(pr) AS prs, max(pr.mergedAt) AS lastActiveAt, collect(p)[0] AS p\nOPTIONAL MATCH (person)-[:MEMBER_OF]->(t:Team)\nOPTIONAL MATCH (person)-[oc:ON_CALL_FOR]->(:Service {uid: $service})\nRETURN person.uid AS person, person.name AS name, rank * prs AS score, prs, t.uid AS team,\n       count(oc) > 0 AS onCall, lastActiveAt, p\nORDER BY score DESC\nLIMIT $limit",
+      "params": {
+        "service": "Service:checkout",
+        "onCallOnly": false,
+        "includeBots": false,
+        "limit": 5
+      },
+      "rows": [
+        {
+          "person": "Person:maya-okafor",
+          "name": "Maya Okafor",
+          "score": 0.137,
+          "prs": 19,
+          "team": "Team:payments",
+          "onCall": false,
+          "lastActiveAt": 1727443200000
+        },
+        {
+          "person": "Person:tomas-lindqvist",
+          "name": "Tomas Lindqvist",
+          "score": 0.094,
+          "prs": 11,
+          "team": "Team:payments",
+          "onCall": true,
+          "lastActiveAt": 1727097600000
+        },
+        {
+          "person": "Person:priya-raman",
+          "name": "Priya Raman",
+          "score": 0.031,
+          "prs": 4,
+          "team": "Team:storefront",
+          "onCall": false,
+          "lastActiveAt": 1726838400000
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Person:maya-okafor",
+              "label": "Person",
+              "name": "Maya Okafor",
+              "props": {
+                "name": "Maya Okafor",
+                "slug": "maya-okafor",
+                "isBot": false,
+                "prCount": 48,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "PR:2143",
+              "label": "PR",
+              "name": "checkout: publish order events with async kafka producer",
+              "props": {
+                "number": 2143,
+                "title": "checkout: publish order events with async kafka producer",
+                "sha": "8c1f0e2a9b",
+                "mergedAt": 1727443200000,
+                "additions": 214,
+                "deletions": 61,
+                "filesChanged": 6,
+                "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2143",
+                "isBot": false,
+                "authorName": "Maya Okafor",
+                "synthetic": false
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Person:maya-okafor-AUTHORED->PR:2143",
+              "source": "Person:maya-okafor",
+              "target": "PR:2143",
+              "type": "AUTHORED",
+              "props": {}
+            },
+            {
+              "id": "PR:2143-TOUCHES->Service:checkout",
+              "source": "PR:2143",
+              "target": "Service:checkout",
+              "type": "TOUCHES",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Person:tomas-lindqvist",
+              "label": "Person",
+              "name": "Tomas Lindqvist",
+              "props": {
+                "name": "Tomas Lindqvist",
+                "slug": "tomas-lindqvist",
+                "isBot": false,
+                "prCount": 31,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "PR:2131",
+              "label": "PR",
+              "name": "checkout: bump grpc client deadline config",
+              "props": {
+                "number": 2131,
+                "title": "checkout: bump grpc client deadline config",
+                "mergedAt": 1727097600000,
+                "isBot": false,
+                "authorName": "Tomas Lindqvist",
+                "synthetic": false,
+                "url": "https://github.com/open-telemetry/opentelemetry-demo/pull/2131"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Person:tomas-lindqvist-AUTHORED->PR:2131",
+              "source": "Person:tomas-lindqvist",
+              "target": "PR:2131",
+              "type": "AUTHORED",
+              "props": {}
+            },
+            {
+              "id": "PR:2131-TOUCHES->Service:checkout",
+              "source": "PR:2131",
+              "target": "Service:checkout",
+              "type": "TOUCHES",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "Top expert on checkout: Maya Okafor (19 PRs, PageRank-weighted score 0.137); Tomas Lindqvist is on call",
+      "ms": 27
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 31,
+    "ts": "2025-09-30T09:14:04.490Z",
+    "type": "finding",
+    "agent": "expert",
+    "finding": {
+      "id": "f_c4expert",
+      "uid": "Finding:f_c4expert",
+      "sessionId": "s_acme_demo01",
+      "agent": "expert",
+      "kind": "expert",
+      "claim": "Maya Okafor (author of #2143, top authorship PageRank on checkout) can fix it; Tomas Lindqvist is on call.",
+      "confidence": 0.85,
+      "about": [
+        "Service:checkout",
+        "Person:maya-okafor",
+        "Person:tomas-lindqvist"
+      ],
+      "evidence": [
+        "Person:maya-okafor",
+        "Person:tomas-lindqvist",
+        "PR:2143"
+      ],
+      "cypher": [
+        "// who_knows: PageRank over authorship, weighted by activity on this service; bots excluded\nCALL algo.pageRank('Person', 'AUTHORED') YIELD node AS person, score AS rank\nWHERE NOT person.isBot\nMATCH p = (person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(s:Service {uid: $service})\nWITH person, rank, count(pr) AS prs, max(pr.mergedAt) AS lastActiveAt, collect(p)[0] AS p\nOPTIONAL MATCH (person)-[:MEMBER_OF]->(t:Team)\nOPTIONAL MATCH (person)-[oc:ON_CALL_FOR]->(:Service {uid: $service})\nRETURN person.uid AS person, person.name AS name, rank * prs AS score, prs, t.uid AS team,\n       count(oc) > 0 AS onCall, lastActiveAt, p\nORDER BY score DESC\nLIMIT $limit",
+        "// on_call: who holds the latest rotation week for this service?\nMATCH p = (person:Person)-[r:ON_CALL_FOR]->(s:Service {uid: $service})\nWHERE r.weekStartTs <= $at\nOPTIONAL MATCH (person)-[:MEMBER_OF]->(t:Team)\nRETURN person.uid AS person, person.name AS name, r.weekStart AS weekStart, t.uid AS team, s.uid AS service, p\nORDER BY r.weekStartTs DESC\nLIMIT 1"
+      ],
+      "handTo": "scribe",
+      "createdAt": "2025-09-30T09:14:04.490Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 32,
+    "ts": "2025-09-30T09:14:04.610Z",
+    "type": "handoff",
+    "from": "expert",
+    "to": "scribe",
+    "findingId": "f_c4expert",
+    "note": "Maya Okafor knows the code; Tomas Lindqvist is on call."
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 33,
+    "ts": "2025-09-30T09:14:04.730Z",
+    "type": "agent_finished",
+    "agent": "expert",
+    "summary": "Maya Okafor (expert), Tomas Lindqvist (on call).",
+    "findingIds": [
+      "f_c4expert"
+    ]
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 34,
+    "ts": "2025-09-30T09:14:04.850Z",
+    "type": "action",
+    "agent": "expert",
+    "action": {
+      "id": "act_01issue",
+      "sessionId": "s_acme_demo01",
+      "tenant": "acme",
+      "kind": "github_issue",
+      "status": "done",
+      "title": "[INC] checkout 5xx at 12%: suspect PR #2143",
+      "url": "https://github.com/blastradius-sandbox/acme-incidents/issues/12",
+      "payload": {
+        "title": "[INC] checkout 5xx at 12%: suspect PR #2143",
+        "labels": [
+          "incident",
+          "sev2"
+        ]
+      },
+      "findingIds": [
+        "f_a1impact",
+        "f_b2cause",
+        "f_c4expert"
+      ],
+      "createdAt": "2025-09-30T09:14:04.850Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 35,
+    "ts": "2025-09-30T09:14:04.970Z",
+    "type": "action",
+    "agent": "expert",
+    "action": {
+      "id": "act_02hook",
+      "sessionId": "s_acme_demo01",
+      "tenant": "acme",
+      "kind": "webhook",
+      "status": "dry_run",
+      "title": "Ping #payments-team",
+      "payload": {
+        "text": "checkout 5xx at 12%: suspect PR #2143 (Maya Okafor). On call: Tomas Lindqvist."
+      },
+      "findingIds": [
+        "f_b2cause",
+        "f_c4expert"
+      ],
+      "createdAt": "2025-09-30T09:14:04.970Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 36,
+    "ts": "2025-09-30T09:14:05.090Z",
+    "type": "action",
+    "agent": "expert",
+    "action": {
+      "id": "act_03rollback",
+      "sessionId": "s_acme_demo01",
+      "tenant": "acme",
+      "kind": "rollback_pr",
+      "status": "dry_run",
+      "title": "Rollback plan for PR #2143",
+      "payload": {
+        "branch": "rollback/s_acme_demo01",
+        "file": "rollbacks/s_acme_demo01.md",
+        "revert": "git revert 8c1f0e2a9b"
+      },
+      "findingIds": [
+        "f_b2cause"
+      ],
+      "createdAt": "2025-09-30T09:14:05.090Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 37,
+    "ts": "2025-09-30T09:14:05.210Z",
+    "type": "agent_started",
+    "agent": "scribe",
+    "goal": "Summarise the run with sources."
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 38,
+    "ts": "2025-09-30T09:14:05.330Z",
+    "type": "tool_call",
+    "agent": "scribe",
+    "callId": "c_10",
+    "tool": "read_handoffs",
+    "input": {}
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 39,
+    "ts": "2025-09-30T09:14:05.370Z",
+    "type": "tool_result",
+    "agent": "scribe",
+    "callId": "c_10",
+    "tool": "read_handoffs",
+    "result": {
+      "tool": "read_handoffs",
+      "tenant": "acme",
+      "cypher": "// read_handoffs: findings in this session handed to me\nMATCH (f:Finding {sessionId: $sessionId})-[:HANDED_TO]->(:Agent {name: $agent})\nMATCH (author:Agent)-[:WROTE]->(f)\nRETURN f.id AS finding, author.name AS from, f.claim AS claim, f.confidence AS confidence,\n       f.about AS about, f.evidence AS evidence, f.cypher AS cypher\nORDER BY f.createdAt",
+      "params": {
+        "sessionId": "s_acme_demo01",
+        "agent": "scribe"
+      },
+      "rows": [
+        {
+          "finding": "f_b3preced",
+          "from": "investigator",
+          "claim": "This matches INC-2025-031 (similarity 0.81): Kafka producer backpressure blocked checkout; runbook checkout-kafka-backpressure resolved it.",
+          "confidence": 0.81,
+          "about": [
+            "Service:checkout",
+            "Incident:INC-2025-031"
+          ],
+          "evidence": [
+            "Incident:INC-2025-031",
+            "Runbook:checkout-kafka-backpressure",
+            "PR:1984"
+          ],
+          "cypher": [
+            "// similar_incidents: vector search over Incident embeddings, then expand to cause, runbook, responders\nCALL db.idx.vector.queryNodes('Incident', 'embedding', $k, vecf32($vec)) YIELD node AS i, score\nOPTIONAL MATCH p1 = (i)-[:CAUSED_BY]->(pr:PR)\nOPTIONAL MATCH p2 = (i)-[:RESOLVED_BY]->(rb:Runbook)\nOPTIONAL MATCH (i)-[:AFFECTED]->(s:Service)\nOPTIONAL MATCH (i)-[:RESPONDED_BY]->(person:Person)\nRETURN i.uid AS incident, i.title AS title, score AS distance, s.uid AS service, pr.uid AS causedBy,\n       rb.uid AS runbook, collect(DISTINCT person.uid) AS responders, p1, p2\nORDER BY distance ASC",
+            "// past_incidents: incidents on the service (or a neighbour) with cause PR and resolving runbook\nMATCH (s:Service {uid: $service})\nMATCH p = (i:Incident)-[:AFFECTED]->(:Service)-[:DEPENDS_ON*0..1]-(s)\nOPTIONAL MATCH (i)-[:CAUSED_BY]->(pr:PR)\nOPTIONAL MATCH (i)-[:RESOLVED_BY]->(rb:Runbook)\nOPTIONAL MATCH (i)-[:RESPONDED_BY]->(person:Person)\nRETURN DISTINCT i.uid AS incident, i.title AS title, i.severity AS severity, i.startedAt AS startedAt,\n       s.uid AS service, pr.uid AS causedBy, rb.uid AS runbook, rb.steps AS runbookSteps,\n       collect(DISTINCT person.uid) AS responders, i.synthetic AS synthetic, i.sessionId AS sessionId, p\nORDER BY startedAt DESC\nLIMIT $limit"
+          ]
+        },
+        {
+          "finding": "f_c4expert",
+          "from": "expert",
+          "claim": "Maya Okafor (author of #2143, top authorship PageRank on checkout) can fix it; Tomas Lindqvist is on call.",
+          "confidence": 0.85,
+          "about": [
+            "Service:checkout",
+            "Person:maya-okafor",
+            "Person:tomas-lindqvist"
+          ],
+          "evidence": [
+            "Person:maya-okafor",
+            "Person:tomas-lindqvist",
+            "PR:2143"
+          ],
+          "cypher": [
+            "// who_knows: PageRank over authorship, weighted by activity on this service; bots excluded\nCALL algo.pageRank('Person', 'AUTHORED') YIELD node AS person, score AS rank\nWHERE NOT person.isBot\nMATCH p = (person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(s:Service {uid: $service})\nWITH person, rank, count(pr) AS prs, max(pr.mergedAt) AS lastActiveAt, collect(p)[0] AS p\nOPTIONAL MATCH (person)-[:MEMBER_OF]->(t:Team)\nOPTIONAL MATCH (person)-[oc:ON_CALL_FOR]->(:Service {uid: $service})\nRETURN person.uid AS person, person.name AS name, rank * prs AS score, prs, t.uid AS team,\n       count(oc) > 0 AS onCall, lastActiveAt, p\nORDER BY score DESC\nLIMIT $limit",
+            "// on_call: who holds the latest rotation week for this service?\nMATCH p = (person:Person)-[r:ON_CALL_FOR]->(s:Service {uid: $service})\nWHERE r.weekStartTs <= $at\nOPTIONAL MATCH (person)-[:MEMBER_OF]->(t:Team)\nRETURN person.uid AS person, person.name AS name, r.weekStart AS weekStart, t.uid AS team, s.uid AS service, p\nORDER BY r.weekStartTs DESC\nLIMIT 1"
+          ]
+        }
+      ],
+      "paths": [],
+      "summary": "2 findings handed to scribe",
+      "ms": 3
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 40,
+    "ts": "2025-09-30T09:14:05.490Z",
+    "type": "finding",
+    "agent": "scribe",
+    "finding": {
+      "id": "f_d5summary",
+      "uid": "Finding:f_d5summary",
+      "sessionId": "s_acme_demo01",
+      "agent": "scribe",
+      "kind": "summary",
+      "claim": "checkout 5xx likely caused by PR #2143; roll back and follow runbook checkout-kafka-backpressure; page Maya Okafor.",
+      "confidence": 0.8,
+      "about": [
+        "Service:checkout",
+        "PR:2143",
+        "Runbook:checkout-kafka-backpressure"
+      ],
+      "evidence": [
+        "PR:2143",
+        "Incident:INC-2025-031",
+        "Person:maya-okafor"
+      ],
+      "cypher": [
+        "// suspect_changes: recent human PRs on the service or anything it depends on\nMATCH (newest:PR) WITH max(newest.mergedAt) AS now\nMATCH p = (author:Person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(touched:Service)<-[:DEPENDS_ON*0..2]-(s:Service {uid: $service})\nWHERE pr.mergedAt >= now - $sinceDays * 86400000 AND ($includeBots OR NOT pr.isBot)\nWITH pr, author, touched, min(length(p)) - 2 AS hops, collect(p)[0] AS p\nRETURN pr.uid AS pr, pr.number AS number, pr.title AS title, pr.mergedAt AS mergedAt, author.name AS author,\n       pr.isBot AS isBot, touched.uid AS service, hops, pr.filesChanged AS files,\n       pr.additions AS additions, pr.deletions AS deletions, pr.url AS url, p\nORDER BY pr.isBot ASC, pr.mergedAt DESC\nLIMIT $limit",
+        "// past_incidents: incidents on the service (or a neighbour) with cause PR and resolving runbook\nMATCH (s:Service {uid: $service})\nMATCH p = (i:Incident)-[:AFFECTED]->(:Service)-[:DEPENDS_ON*0..1]-(s)\nOPTIONAL MATCH (i)-[:CAUSED_BY]->(pr:PR)\nOPTIONAL MATCH (i)-[:RESOLVED_BY]->(rb:Runbook)\nOPTIONAL MATCH (i)-[:RESPONDED_BY]->(person:Person)\nRETURN DISTINCT i.uid AS incident, i.title AS title, i.severity AS severity, i.startedAt AS startedAt,\n       s.uid AS service, pr.uid AS causedBy, rb.uid AS runbook, rb.steps AS runbookSteps,\n       collect(DISTINCT person.uid) AS responders, i.synthetic AS synthetic, i.sessionId AS sessionId, p\nORDER BY startedAt DESC\nLIMIT $limit",
+        "// who_knows: PageRank over authorship, weighted by activity on this service; bots excluded\nCALL algo.pageRank('Person', 'AUTHORED') YIELD node AS person, score AS rank\nWHERE NOT person.isBot\nMATCH p = (person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(s:Service {uid: $service})\nWITH person, rank, count(pr) AS prs, max(pr.mergedAt) AS lastActiveAt, collect(p)[0] AS p\nOPTIONAL MATCH (person)-[:MEMBER_OF]->(t:Team)\nOPTIONAL MATCH (person)-[oc:ON_CALL_FOR]->(:Service {uid: $service})\nRETURN person.uid AS person, person.name AS name, rank * prs AS score, prs, t.uid AS team,\n       count(oc) > 0 AS onCall, lastActiveAt, p\nORDER BY score DESC\nLIMIT $limit"
+      ],
+      "createdAt": "2025-09-30T09:14:05.490Z"
+    }
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 41,
+    "ts": "2025-09-30T09:14:05.610Z",
+    "type": "agent_message",
+    "agent": "scribe",
+    "text": "checkout is returning 5xx and three services depend on it. The most likely cause is PR #2143, merged two days before the alert. This looks like INC-2025-031, which was fixed with the Kafka backpressure runbook. Maya Okafor knows this code best and Tomas Lindqvist is on call.",
+    "claims": [
+      {
+        "text": "frontend, frontend-proxy and load-generator break when checkout fails; frontend is the chokepoint.",
+        "findingIds": [
+          "f_a1impact"
+        ]
+      },
+      {
+        "text": "PR #2143 (async Kafka producer, Maya Okafor) is the most likely cause.",
+        "findingIds": [
+          "f_b2cause"
+        ]
+      },
+      {
+        "text": "INC-2025-031 is a close precedent; runbook checkout-kafka-backpressure resolved it.",
+        "findingIds": [
+          "f_b3preced"
+        ]
+      },
+      {
+        "text": "Maya Okafor can fix it; Tomas Lindqvist is on call.",
+        "findingIds": [
+          "f_c4expert"
+        ]
+      }
+    ]
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 42,
+    "ts": "2025-09-30T09:14:05.730Z",
+    "type": "agent_finished",
+    "agent": "scribe",
+    "summary": "Summary written; ready to close.",
+    "findingIds": [
+      "f_d5summary"
+    ]
+  },
+  {
+    "runId": "r_acme_demo01",
+    "sessionId": "s_acme_demo01",
+    "tenant": "acme",
+    "seq": 43,
+    "ts": "2025-09-30T09:14:05.850Z",
+    "type": "run_finished",
+    "status": "ok",
+    "findingIds": [
+      "f_a1impact",
+      "f_b2cause",
+      "f_b3preced",
+      "f_c4expert",
+      "f_d5summary"
+    ],
+    "ms": 4210
+  }
+]

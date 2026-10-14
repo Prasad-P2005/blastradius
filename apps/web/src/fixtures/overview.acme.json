@@ -1,0 +1,780 @@
+{
+  "nodes": [
+    {
+      "id": "Service:frontend-proxy",
+      "label": "Service",
+      "name": "frontend-proxy",
+      "props": {
+        "name": "frontend-proxy",
+        "slug": "frontend-proxy",
+        "synthetic": false,
+        "language": "envoy",
+        "kind": "proxy",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:frontend",
+      "label": "Service",
+      "name": "frontend",
+      "props": {
+        "name": "frontend",
+        "slug": "frontend",
+        "synthetic": false,
+        "language": "typescript",
+        "kind": "frontend",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:load-generator",
+      "label": "Service",
+      "name": "load-generator",
+      "props": {
+        "name": "load-generator",
+        "slug": "load-generator",
+        "synthetic": false,
+        "language": "python",
+        "kind": "tool",
+        "tier": 3
+      }
+    },
+    {
+      "id": "Service:image-provider",
+      "label": "Service",
+      "name": "image-provider",
+      "props": {
+        "name": "image-provider",
+        "slug": "image-provider",
+        "synthetic": false,
+        "language": "nginx",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:checkout",
+      "label": "Service",
+      "name": "checkout",
+      "props": {
+        "name": "checkout",
+        "slug": "checkout",
+        "synthetic": false,
+        "language": "go",
+        "kind": "service",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:cart",
+      "label": "Service",
+      "name": "cart",
+      "props": {
+        "name": "cart",
+        "slug": "cart",
+        "synthetic": false,
+        "language": "csharp",
+        "kind": "service",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:valkey-cart",
+      "label": "Service",
+      "name": "valkey-cart",
+      "props": {
+        "name": "valkey-cart",
+        "slug": "valkey-cart",
+        "synthetic": false,
+        "language": "valkey",
+        "kind": "datastore",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:payment",
+      "label": "Service",
+      "name": "payment",
+      "props": {
+        "name": "payment",
+        "slug": "payment",
+        "synthetic": false,
+        "language": "javascript",
+        "kind": "service",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:shipping",
+      "label": "Service",
+      "name": "shipping",
+      "props": {
+        "name": "shipping",
+        "slug": "shipping",
+        "synthetic": false,
+        "language": "rust",
+        "kind": "service",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:quote",
+      "label": "Service",
+      "name": "quote",
+      "props": {
+        "name": "quote",
+        "slug": "quote",
+        "synthetic": false,
+        "language": "php",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:currency",
+      "label": "Service",
+      "name": "currency",
+      "props": {
+        "name": "currency",
+        "slug": "currency",
+        "synthetic": false,
+        "language": "cpp",
+        "kind": "service",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:email",
+      "label": "Service",
+      "name": "email",
+      "props": {
+        "name": "email",
+        "slug": "email",
+        "synthetic": false,
+        "language": "ruby",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:ad",
+      "label": "Service",
+      "name": "ad",
+      "props": {
+        "name": "ad",
+        "slug": "ad",
+        "synthetic": false,
+        "language": "java",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:recommendation",
+      "label": "Service",
+      "name": "recommendation",
+      "props": {
+        "name": "recommendation",
+        "slug": "recommendation",
+        "synthetic": false,
+        "language": "python",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:product-catalog",
+      "label": "Service",
+      "name": "product-catalog",
+      "props": {
+        "name": "product-catalog",
+        "slug": "product-catalog",
+        "synthetic": false,
+        "language": "go",
+        "kind": "service",
+        "tier": 1
+      }
+    },
+    {
+      "id": "Service:product-reviews",
+      "label": "Service",
+      "name": "product-reviews",
+      "props": {
+        "name": "product-reviews",
+        "slug": "product-reviews",
+        "synthetic": false,
+        "language": "python",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:fraud-detection",
+      "label": "Service",
+      "name": "fraud-detection",
+      "props": {
+        "name": "fraud-detection",
+        "slug": "fraud-detection",
+        "synthetic": false,
+        "language": "kotlin",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:accounting",
+      "label": "Service",
+      "name": "accounting",
+      "props": {
+        "name": "accounting",
+        "slug": "accounting",
+        "synthetic": false,
+        "language": "csharp",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:kafka",
+      "label": "Service",
+      "name": "kafka",
+      "props": {
+        "name": "kafka",
+        "slug": "kafka",
+        "synthetic": false,
+        "language": "java",
+        "kind": "queue",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:flagd",
+      "label": "Service",
+      "name": "flagd",
+      "props": {
+        "name": "flagd",
+        "slug": "flagd",
+        "synthetic": false,
+        "language": "go",
+        "kind": "service",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Service:postgresql",
+      "label": "Service",
+      "name": "postgresql",
+      "props": {
+        "name": "postgresql",
+        "slug": "postgresql",
+        "synthetic": false,
+        "language": "postgres",
+        "kind": "datastore",
+        "tier": 2
+      }
+    },
+    {
+      "id": "Team:storefront",
+      "label": "Team",
+      "name": "Storefront",
+      "props": {
+        "name": "Storefront",
+        "slug": "storefront",
+        "slack": "#storefront-team",
+        "synthetic": true
+      }
+    },
+    {
+      "id": "Team:payments",
+      "label": "Team",
+      "name": "Payments",
+      "props": {
+        "name": "Payments",
+        "slug": "payments",
+        "slack": "#payments-team",
+        "synthetic": true
+      }
+    },
+    {
+      "id": "Team:catalog",
+      "label": "Team",
+      "name": "Catalog",
+      "props": {
+        "name": "Catalog",
+        "slug": "catalog",
+        "slack": "#catalog-team",
+        "synthetic": true
+      }
+    },
+    {
+      "id": "Team:logistics",
+      "label": "Team",
+      "name": "Logistics",
+      "props": {
+        "name": "Logistics",
+        "slug": "logistics",
+        "slack": "#logistics-team",
+        "synthetic": true
+      }
+    },
+    {
+      "id": "Team:data",
+      "label": "Team",
+      "name": "Data",
+      "props": {
+        "name": "Data",
+        "slug": "data",
+        "slack": "#data-team",
+        "synthetic": true
+      }
+    },
+    {
+      "id": "Team:platform",
+      "label": "Team",
+      "name": "Platform",
+      "props": {
+        "name": "Platform",
+        "slug": "platform",
+        "slack": "#platform-team",
+        "synthetic": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "Service:frontend-proxy-DEPENDS_ON->Service:frontend",
+      "source": "Service:frontend-proxy",
+      "target": "Service:frontend",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-proxy-DEPENDS_ON->Service:image-provider",
+      "source": "Service:frontend-proxy",
+      "target": "Service:image-provider",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-proxy-DEPENDS_ON->Service:flagd",
+      "source": "Service:frontend-proxy",
+      "target": "Service:flagd",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:load-generator-DEPENDS_ON->Service:frontend-proxy",
+      "source": "Service:load-generator",
+      "target": "Service:frontend-proxy",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:ad",
+      "source": "Service:frontend",
+      "target": "Service:ad",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:cart",
+      "source": "Service:frontend",
+      "target": "Service:cart",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:checkout",
+      "source": "Service:frontend",
+      "target": "Service:checkout",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:currency",
+      "source": "Service:frontend",
+      "target": "Service:currency",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:product-catalog",
+      "source": "Service:frontend",
+      "target": "Service:product-catalog",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:recommendation",
+      "source": "Service:frontend",
+      "target": "Service:recommendation",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:shipping",
+      "source": "Service:frontend",
+      "target": "Service:shipping",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:frontend-DEPENDS_ON->Service:product-reviews",
+      "source": "Service:frontend",
+      "target": "Service:product-reviews",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:checkout-DEPENDS_ON->Service:cart",
+      "source": "Service:checkout",
+      "target": "Service:cart",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:checkout-DEPENDS_ON->Service:currency",
+      "source": "Service:checkout",
+      "target": "Service:currency",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:checkout-DEPENDS_ON->Service:email",
+      "source": "Service:checkout",
+      "target": "Service:email",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:checkout-DEPENDS_ON->Service:payment",
+      "source": "Service:checkout",
+      "target": "Service:payment",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:checkout-DEPENDS_ON->Service:product-catalog",
+      "source": "Service:checkout",
+      "target": "Service:product-catalog",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:checkout-DEPENDS_ON->Service:shipping",
+      "source": "Service:checkout",
+      "target": "Service:shipping",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:checkout-DEPENDS_ON->Service:kafka",
+      "source": "Service:checkout",
+      "target": "Service:kafka",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "kafka"
+      }
+    },
+    {
+      "id": "Service:cart-DEPENDS_ON->Service:valkey-cart",
+      "source": "Service:cart",
+      "target": "Service:valkey-cart",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "redis"
+      }
+    },
+    {
+      "id": "Service:cart-DEPENDS_ON->Service:flagd",
+      "source": "Service:cart",
+      "target": "Service:flagd",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:recommendation-DEPENDS_ON->Service:product-catalog",
+      "source": "Service:recommendation",
+      "target": "Service:product-catalog",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:recommendation-DEPENDS_ON->Service:flagd",
+      "source": "Service:recommendation",
+      "target": "Service:flagd",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:shipping-DEPENDS_ON->Service:quote",
+      "source": "Service:shipping",
+      "target": "Service:quote",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:payment-DEPENDS_ON->Service:flagd",
+      "source": "Service:payment",
+      "target": "Service:flagd",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:ad-DEPENDS_ON->Service:flagd",
+      "source": "Service:ad",
+      "target": "Service:flagd",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:fraud-detection-DEPENDS_ON->Service:kafka",
+      "source": "Service:fraud-detection",
+      "target": "Service:kafka",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "kafka"
+      }
+    },
+    {
+      "id": "Service:fraud-detection-DEPENDS_ON->Service:flagd",
+      "source": "Service:fraud-detection",
+      "target": "Service:flagd",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:accounting-DEPENDS_ON->Service:kafka",
+      "source": "Service:accounting",
+      "target": "Service:kafka",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "kafka"
+      }
+    },
+    {
+      "id": "Service:accounting-DEPENDS_ON->Service:postgresql",
+      "source": "Service:accounting",
+      "target": "Service:postgresql",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "postgres"
+      }
+    },
+    {
+      "id": "Service:product-reviews-DEPENDS_ON->Service:product-catalog",
+      "source": "Service:product-reviews",
+      "target": "Service:product-catalog",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "grpc"
+      }
+    },
+    {
+      "id": "Service:product-reviews-DEPENDS_ON->Service:postgresql",
+      "source": "Service:product-reviews",
+      "target": "Service:postgresql",
+      "type": "DEPENDS_ON",
+      "props": {
+        "protocol": "postgres"
+      }
+    },
+    {
+      "id": "Team:storefront-OWNS->Service:frontend",
+      "source": "Team:storefront",
+      "target": "Service:frontend",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:storefront-OWNS->Service:frontend-proxy",
+      "source": "Team:storefront",
+      "target": "Service:frontend-proxy",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:storefront-OWNS->Service:image-provider",
+      "source": "Team:storefront",
+      "target": "Service:image-provider",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:storefront-OWNS->Service:load-generator",
+      "source": "Team:storefront",
+      "target": "Service:load-generator",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:payments-OWNS->Service:checkout",
+      "source": "Team:payments",
+      "target": "Service:checkout",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:payments-OWNS->Service:payment",
+      "source": "Team:payments",
+      "target": "Service:payment",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:payments-OWNS->Service:cart",
+      "source": "Team:payments",
+      "target": "Service:cart",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:catalog-OWNS->Service:product-catalog",
+      "source": "Team:catalog",
+      "target": "Service:product-catalog",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:catalog-OWNS->Service:recommendation",
+      "source": "Team:catalog",
+      "target": "Service:recommendation",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:catalog-OWNS->Service:ad",
+      "source": "Team:catalog",
+      "target": "Service:ad",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:catalog-OWNS->Service:product-reviews",
+      "source": "Team:catalog",
+      "target": "Service:product-reviews",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:logistics-OWNS->Service:shipping",
+      "source": "Team:logistics",
+      "target": "Service:shipping",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:logistics-OWNS->Service:quote",
+      "source": "Team:logistics",
+      "target": "Service:quote",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:logistics-OWNS->Service:email",
+      "source": "Team:logistics",
+      "target": "Service:email",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:logistics-OWNS->Service:currency",
+      "source": "Team:logistics",
+      "target": "Service:currency",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:data-OWNS->Service:kafka",
+      "source": "Team:data",
+      "target": "Service:kafka",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:data-OWNS->Service:accounting",
+      "source": "Team:data",
+      "target": "Service:accounting",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:data-OWNS->Service:fraud-detection",
+      "source": "Team:data",
+      "target": "Service:fraud-detection",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:data-OWNS->Service:valkey-cart",
+      "source": "Team:data",
+      "target": "Service:valkey-cart",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:data-OWNS->Service:postgresql",
+      "source": "Team:data",
+      "target": "Service:postgresql",
+      "type": "OWNS",
+      "props": {}
+    },
+    {
+      "id": "Team:platform-OWNS->Service:flagd",
+      "source": "Team:platform",
+      "target": "Service:flagd",
+      "type": "OWNS",
+      "props": {}
+    }
+  ]
+}

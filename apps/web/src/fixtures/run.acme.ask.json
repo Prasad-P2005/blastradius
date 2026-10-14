@@ -1,0 +1,589 @@
+[
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 0,
+    "ts": "2025-09-30T09:20:00.120Z",
+    "type": "run_started",
+    "mode": "ask",
+    "agentMode": "scripted",
+    "question": "Why does checkout publish to Kafka instead of calling accounting directly?"
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 1,
+    "ts": "2025-09-30T09:20:00.240Z",
+    "type": "agent_started",
+    "agent": "navigator",
+    "goal": "Answer with sources from decisions, docs, tickets and threads."
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 2,
+    "ts": "2025-09-30T09:20:00.360Z",
+    "type": "tool_call",
+    "agent": "navigator",
+    "callId": "c_01",
+    "tool": "ask_company",
+    "input": {
+      "question": "Why does checkout publish to Kafka instead of calling accounting directly?",
+      "k": 6
+    }
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 3,
+    "ts": "2025-09-30T09:20:00.680Z",
+    "type": "tool_result",
+    "agent": "navigator",
+    "callId": "c_01",
+    "tool": "ask_company",
+    "result": {
+      "tool": "ask_company",
+      "tenant": "acme",
+      "cypher": "// ask_company: vector search across text-bearing labels, then expand to the people, PRs and services behind each hit\nCALL db.idx.vector.queryNodes($label, 'embedding', $k, vecf32($vec)) YIELD node AS hit, score\nOPTIONAL MATCH p = (hit)-[:ABOUT|JUSTIFIES|MENTIONS|DOCUMENTED_IN|DECIDED_BY]-(rel)\nRETURN hit.uid AS source, labels(hit)[0] AS label, coalesce(hit.title, hit.key) AS title, score AS distance,\n       left(coalesce(hit.text, hit.decision, hit.body, ''), 240) AS snippet,\n       collect(DISTINCT {uid: rel.uid, label: labels(rel)[0], name: coalesce(rel.name, rel.title), rel: type(relationships(p)[0])}) AS related, collect(p)[..4] AS paths\nORDER BY distance ASC\nLIMIT $k",
+      "params": {
+        "question": "Why does checkout publish to Kafka instead of calling accounting directly?",
+        "k": 6
+      },
+      "rows": [
+        {
+          "source": "Decision:ADR-007",
+          "label": "Decision",
+          "title": "Publish order events asynchronously through Kafka",
+          "similarity": 0.83,
+          "snippet": "Checkout publishes OrderPlaced events to Kafka; accounting and fraud-detection consume asynchronously so checkout latency is not coupled to them.",
+          "related": [
+            {
+              "uid": "PR:1984",
+              "label": "PR",
+              "name": "checkout: add order confirmation retry loop",
+              "rel": "JUSTIFIES"
+            },
+            {
+              "uid": "Doc:order-events-design",
+              "label": "Doc",
+              "name": "Order events design",
+              "rel": "DOCUMENTED_IN"
+            },
+            {
+              "uid": "Team:payments",
+              "label": "Team",
+              "name": "Payments",
+              "rel": "DECIDED_BY"
+            }
+          ]
+        },
+        {
+          "source": "Doc:order-events-design",
+          "label": "Doc",
+          "title": "Order events design",
+          "similarity": 0.77,
+          "snippet": "Order events are fire-and-forget from checkout. Consumers must be idempotent.",
+          "related": [
+            {
+              "uid": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "rel": "ABOUT"
+            }
+          ]
+        },
+        {
+          "source": "Thread:t-0042",
+          "label": "Thread",
+          "title": "#payments-team: why is checkout writing to kafka?",
+          "similarity": 0.71,
+          "snippet": "Maya Okafor: we moved to kafka so accounting outages stop failing checkout...",
+          "related": [
+            {
+              "uid": "Person:maya-okafor",
+              "label": "Person",
+              "name": "Maya Okafor",
+              "rel": "MENTIONS"
+            }
+          ]
+        },
+        {
+          "source": "Issue:ACME-142",
+          "label": "Issue",
+          "title": "Accounting misses orders when checkout restarts",
+          "similarity": 0.62,
+          "snippet": "Before ADR-007, accounting missed orders whenever checkout restarted mid-call.",
+          "related": [
+            {
+              "uid": "Service:accounting",
+              "label": "Service",
+              "name": "accounting",
+              "rel": "ABOUT"
+            }
+          ]
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Decision:ADR-007",
+              "label": "Decision",
+              "name": "Publish order events asynchronously through Kafka",
+              "props": {
+                "key": "ADR-007",
+                "title": "Publish order events asynchronously through Kafka",
+                "status": "accepted"
+              }
+            },
+            {
+              "id": "PR:1984",
+              "label": "PR",
+              "name": "checkout: add order confirmation retry loop",
+              "props": {
+                "number": 1984,
+                "title": "checkout: add order confirmation retry loop",
+                "isBot": false,
+                "synthetic": false
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Decision:ADR-007-JUSTIFIES->PR:1984",
+              "source": "Decision:ADR-007",
+              "target": "PR:1984",
+              "type": "JUSTIFIES",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Decision:ADR-007",
+              "label": "Decision",
+              "name": "Publish order events asynchronously through Kafka",
+              "props": {
+                "key": "ADR-007",
+                "title": "Publish order events asynchronously through Kafka",
+                "status": "accepted"
+              }
+            },
+            {
+              "id": "Doc:order-events-design",
+              "label": "Doc",
+              "name": "Order events design",
+              "props": {
+                "title": "Order events design",
+                "kind": "design"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Decision:ADR-007-DOCUMENTED_IN->Doc:order-events-design",
+              "source": "Decision:ADR-007",
+              "target": "Doc:order-events-design",
+              "type": "DOCUMENTED_IN",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Decision:ADR-007",
+              "label": "Decision",
+              "name": "Publish order events asynchronously through Kafka",
+              "props": {
+                "key": "ADR-007",
+                "title": "Publish order events asynchronously through Kafka",
+                "status": "accepted"
+              }
+            },
+            {
+              "id": "Team:payments",
+              "label": "Team",
+              "name": "Payments",
+              "props": {
+                "name": "Payments",
+                "slug": "payments",
+                "slack": "#payments-team",
+                "synthetic": true
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Decision:ADR-007-DECIDED_BY->Team:payments",
+              "source": "Decision:ADR-007",
+              "target": "Team:payments",
+              "type": "DECIDED_BY",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Doc:order-events-design",
+              "label": "Doc",
+              "name": "Order events design",
+              "props": {
+                "title": "Order events design",
+                "kind": "design"
+              }
+            },
+            {
+              "id": "Service:checkout",
+              "label": "Service",
+              "name": "checkout",
+              "props": {
+                "name": "checkout",
+                "slug": "checkout",
+                "synthetic": false,
+                "language": "go",
+                "kind": "service",
+                "tier": 1,
+                "repoPath": "src/checkout"
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Doc:order-events-design-ABOUT->Service:checkout",
+              "source": "Doc:order-events-design",
+              "target": "Service:checkout",
+              "type": "ABOUT",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Thread:t-0042",
+              "label": "Thread",
+              "name": "#payments-team: why is checkout writing to kafka?",
+              "props": {
+                "channel": "#payments-team",
+                "title": "#payments-team: why is checkout writing to kafka?"
+              }
+            },
+            {
+              "id": "Person:maya-okafor",
+              "label": "Person",
+              "name": "Maya Okafor",
+              "props": {
+                "name": "Maya Okafor",
+                "slug": "maya-okafor",
+                "isBot": false,
+                "prCount": 48,
+                "synthetic": false
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Thread:t-0042-MENTIONS->Person:maya-okafor",
+              "source": "Thread:t-0042",
+              "target": "Person:maya-okafor",
+              "type": "MENTIONS",
+              "props": {}
+            }
+          ]
+        },
+        {
+          "nodes": [
+            {
+              "id": "Issue:ACME-142",
+              "label": "Issue",
+              "name": "Accounting misses orders when checkout restarts",
+              "props": {
+                "key": "ACME-142",
+                "title": "Accounting misses orders when checkout restarts",
+                "status": "done",
+                "priority": "P2"
+              }
+            },
+            {
+              "id": "Service:accounting",
+              "label": "Service",
+              "name": "accounting",
+              "props": {
+                "name": "accounting",
+                "slug": "accounting",
+                "synthetic": false,
+                "language": "csharp",
+                "kind": "service",
+                "tier": 2
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Issue:ACME-142-ABOUT->Service:accounting",
+              "source": "Issue:ACME-142",
+              "target": "Service:accounting",
+              "type": "ABOUT",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "4 sources; best: ADR-007 'Publish order events asynchronously through Kafka' (similarity 0.83)",
+      "ms": 38
+    }
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 4,
+    "ts": "2025-09-30T09:20:00.800Z",
+    "type": "tool_call",
+    "agent": "navigator",
+    "callId": "c_02",
+    "tool": "decision_trace",
+    "input": {
+      "uid": "Decision:ADR-007"
+    }
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 5,
+    "ts": "2025-09-30T09:20:01.000Z",
+    "type": "tool_result",
+    "agent": "navigator",
+    "callId": "c_02",
+    "tool": "decision_trace",
+    "result": {
+      "tool": "decision_trace",
+      "tenant": "acme",
+      "cypher": "// decision_trace: Doc <- Decision -> PR <- Incident\nMATCH (d:Decision {uid: $uid})\nOPTIONAL MATCH p1 = (d)-[:DOCUMENTED_IN]->(doc:Doc)\nOPTIONAL MATCH p2 = (d)-[:JUSTIFIES]->(pr:PR)\nOPTIONAL MATCH p3 = (pr)<-[:CAUSED_BY]-(i:Incident)\nOPTIONAL MATCH (d)-[:DECIDED_BY]->(who)\nRETURN d.uid AS decision, d.title AS title, d.status AS status, d.decidedAt AS decidedAt, doc.uid AS doc,\n       collect(DISTINCT pr.uid) AS prs, collect(DISTINCT i.uid) AS incidents, collect(DISTINCT who.uid) AS decidedBy, p1, p2, p3",
+      "params": {
+        "uid": "Decision:ADR-007",
+        "limit": 3
+      },
+      "rows": [
+        {
+          "decision": "Decision:ADR-007",
+          "title": "Publish order events asynchronously through Kafka",
+          "status": "accepted",
+          "decidedAt": 1709251200000,
+          "doc": "Doc:order-events-design",
+          "prs": [
+            "PR:1984"
+          ],
+          "incidents": [
+            "Incident:INC-2025-031"
+          ],
+          "decidedBy": [
+            "Team:payments"
+          ],
+          "services": [
+            "Service:checkout",
+            "Service:kafka"
+          ]
+        }
+      ],
+      "paths": [
+        {
+          "nodes": [
+            {
+              "id": "Doc:order-events-design",
+              "label": "Doc",
+              "name": "Order events design",
+              "props": {
+                "title": "Order events design",
+                "kind": "design"
+              }
+            },
+            {
+              "id": "Decision:ADR-007",
+              "label": "Decision",
+              "name": "Publish order events asynchronously through Kafka",
+              "props": {
+                "key": "ADR-007",
+                "title": "Publish order events asynchronously through Kafka",
+                "status": "accepted"
+              }
+            },
+            {
+              "id": "PR:1984",
+              "label": "PR",
+              "name": "checkout: add order confirmation retry loop",
+              "props": {
+                "number": 1984,
+                "title": "checkout: add order confirmation retry loop",
+                "isBot": false,
+                "synthetic": false
+              }
+            },
+            {
+              "id": "Incident:INC-2025-031",
+              "label": "Incident",
+              "name": "Checkout 5xx after Kafka producer blocked on full buffer",
+              "props": {
+                "key": "INC-2025-031",
+                "title": "Checkout 5xx after Kafka producer blocked on full buffer",
+                "severity": "SEV2",
+                "status": "resolved",
+                "startedAt": 1719820800000,
+                "resolvedAt": 1719828000000,
+                "synthetic": true
+              }
+            }
+          ],
+          "edges": [
+            {
+              "id": "Decision:ADR-007-DOCUMENTED_IN->Doc:order-events-design",
+              "source": "Decision:ADR-007",
+              "target": "Doc:order-events-design",
+              "type": "DOCUMENTED_IN",
+              "props": {}
+            },
+            {
+              "id": "Decision:ADR-007-JUSTIFIES->PR:1984",
+              "source": "Decision:ADR-007",
+              "target": "PR:1984",
+              "type": "JUSTIFIES",
+              "props": {}
+            },
+            {
+              "id": "Incident:INC-2025-031-CAUSED_BY->PR:1984",
+              "source": "Incident:INC-2025-031",
+              "target": "PR:1984",
+              "type": "CAUSED_BY",
+              "props": {}
+            }
+          ]
+        }
+      ],
+      "summary": "ADR-007 → PR #1984 → INC-2025-031; documented in 'Order events design'",
+      "ms": 12
+    }
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 6,
+    "ts": "2025-09-30T09:20:01.120Z",
+    "type": "finding",
+    "agent": "navigator",
+    "finding": {
+      "id": "f_n1answer",
+      "uid": "Finding:f_n1answer",
+      "sessionId": "s_acme_ask01",
+      "agent": "navigator",
+      "kind": "answer",
+      "claim": "Checkout publishes order events to Kafka because of ADR-007, so accounting and fraud-detection outages no longer fail checkout.",
+      "confidence": 0.86,
+      "about": [
+        "Service:checkout",
+        "Decision:ADR-007"
+      ],
+      "evidence": [
+        "Decision:ADR-007",
+        "Doc:order-events-design",
+        "Issue:ACME-142"
+      ],
+      "cypher": [
+        "// ask_company: vector search across text-bearing labels, then expand to the people, PRs and services behind each hit\nCALL db.idx.vector.queryNodes($label, 'embedding', $k, vecf32($vec)) YIELD node AS hit, score\nOPTIONAL MATCH p = (hit)-[:ABOUT|JUSTIFIES|MENTIONS|DOCUMENTED_IN|DECIDED_BY]-(rel)\nRETURN hit.uid AS source, labels(hit)[0] AS label, coalesce(hit.title, hit.key) AS title, score AS distance,\n       left(coalesce(hit.text, hit.decision, hit.body, ''), 240) AS snippet,\n       collect(DISTINCT {uid: rel.uid, label: labels(rel)[0], name: coalesce(rel.name, rel.title), rel: type(relationships(p)[0])}) AS related, collect(p)[..4] AS paths\nORDER BY distance ASC\nLIMIT $k"
+      ],
+      "createdAt": "2025-09-30T09:20:01.120Z"
+    }
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 7,
+    "ts": "2025-09-30T09:20:01.240Z",
+    "type": "finding",
+    "agent": "navigator",
+    "finding": {
+      "id": "f_n2trace",
+      "uid": "Finding:f_n2trace",
+      "sessionId": "s_acme_ask01",
+      "agent": "navigator",
+      "kind": "answer",
+      "claim": "ADR-007 was implemented in PR #1984, which later caused INC-2025-031 (producer backpressure).",
+      "confidence": 0.8,
+      "about": [
+        "Decision:ADR-007",
+        "PR:1984",
+        "Incident:INC-2025-031"
+      ],
+      "evidence": [
+        "PR:1984",
+        "Incident:INC-2025-031",
+        "Doc:order-events-design"
+      ],
+      "cypher": [
+        "// decision_trace: Doc <- Decision -> PR <- Incident\nMATCH (d:Decision {uid: $uid})\nOPTIONAL MATCH p1 = (d)-[:DOCUMENTED_IN]->(doc:Doc)\nOPTIONAL MATCH p2 = (d)-[:JUSTIFIES]->(pr:PR)\nOPTIONAL MATCH p3 = (pr)<-[:CAUSED_BY]-(i:Incident)\nOPTIONAL MATCH (d)-[:DECIDED_BY]->(who)\nRETURN d.uid AS decision, d.title AS title, d.status AS status, d.decidedAt AS decidedAt, doc.uid AS doc,\n       collect(DISTINCT pr.uid) AS prs, collect(DISTINCT i.uid) AS incidents, collect(DISTINCT who.uid) AS decidedBy, p1, p2, p3"
+      ],
+      "createdAt": "2025-09-30T09:20:01.240Z"
+    }
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 8,
+    "ts": "2025-09-30T09:20:01.360Z",
+    "type": "agent_message",
+    "agent": "navigator",
+    "text": "Because of ADR-007: order events go through Kafka so that accounting and fraud-detection can fail without failing checkout. It was implemented in PR #1984, which was later the cause of INC-2025-031.",
+    "claims": [
+      {
+        "text": "ADR-007 moved order events to Kafka so consumer outages don't fail checkout.",
+        "findingIds": [
+          "f_n1answer"
+        ]
+      },
+      {
+        "text": "PR #1984 implemented it and later caused INC-2025-031.",
+        "findingIds": [
+          "f_n2trace"
+        ]
+      }
+    ]
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 9,
+    "ts": "2025-09-30T09:20:01.480Z",
+    "type": "agent_finished",
+    "agent": "navigator",
+    "summary": "Answered with 4 sources.",
+    "findingIds": [
+      "f_n1answer",
+      "f_n2trace"
+    ]
+  },
+  {
+    "runId": "r_acme_ask01",
+    "sessionId": "s_acme_ask01",
+    "tenant": "acme",
+    "seq": 10,
+    "ts": "2025-09-30T09:20:01.600Z",
+    "type": "run_finished",
+    "status": "ok",
+    "findingIds": [
+      "f_n1answer",
+      "f_n2trace"
+    ],
+    "ms": 1180
+  }
+]

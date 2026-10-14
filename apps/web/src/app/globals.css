@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Dark-first incident console: neutral blue-grey surfaces,
+ * colour reserved for meaning (graph labels, status, confidence).
+ */
+@theme {
+  --color-bg: #090b0f;
+  --color-panel: #0e1117;
+  --color-panel-2: #131720;
+  --color-panel-3: #191e29;
+  --color-line: #1d2330;
+  --color-line-2: #283041;
+  --color-fg: #d9dde6;
+  --color-fg-2: #b4bccb;
+  --color-muted: #8690a3;
+  --color-faint: #586174;
+  --color-accent: #8b9cff;
+  --color-accent-2: #6274f0;
+  --color-ok: #34d399;
+  --color-warn: #fbbf24;
+  --color-bad: #f87171;
+  --font-sans: "Inter", "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-2) transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@utility animate-slide-in {
+  animation: slide-in 220ms ease-out both;
+}
+@utility animate-drawer-in {
+  animation: drawer-in 200ms ease-out both;
+}
+@utility animate-fade-in {
+  animation: fade-in 160ms ease-out both;
+}
+@utility animate-breathe {
+  animation: breathe 1.4s ease-in-out infinite;
+}
+
+/* Cypher / code blocks */
+.code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 2;
+}
+.cy-comment {
+  color: #6b7590;
+  font-style: italic;
+}
+.cy-kw {
+  color: #c4a7ff;
+}
+.cy-label {
+  color: #7dd3fc;
+}
+.cy-param {
+  color: #fbbf24;
+}
+.cy-str {
+  color: #86efac;
+}
+.cy-fn {
+  color: #f9a8d4;
+}
