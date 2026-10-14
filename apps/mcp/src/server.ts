@@ -124,7 +124,9 @@ export function createMcpServer(opts: ServerOptions = {}): McpServer {
     async (uri) => {
       const tenants = await Promise.all(
         TENANTS.map(async (t) => {
-          const base = { id: t, graph: graphName(t), ...TENANT_INFO[t] };
+          // Mirrors graphKey() in packages/graph (not part of its public API).
+          const ns = process.env.BLASTRADIUS_GRAPH_NAMESPACE;
+          const base = { id: t, graph: ns ? `${ns}_${graphName(t)}` : graphName(t), ...TENANT_INFO[t] };
           try {
             return { ...base, counts: await counts(t) };
           } catch (err) {
