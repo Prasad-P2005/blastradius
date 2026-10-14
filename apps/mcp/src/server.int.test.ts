@@ -100,20 +100,40 @@ describe("Streamable HTTP, writes enabled", () => {
   });
 });
 
+/** Spawns `main.ts --stdio` as a subprocess (its own FalkorDB client singleton). */
+async function connectStdio(env: Record<string, string>): Promise<Client> {
+  const transport = new StdioClientTransport({
+    command: join(here, "..", "node_modules", ".bin", "tsx"),
+    args: [join(here, "main.ts"), "--stdio"],
+    env: { ...(process.env as Record<string, string>), MCP_ALLOW_WRITES: "false", ...env },
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "blastradius-stdio-test", version: "0.0.0" });
+  await client.connect(transport);
+  return client;
+}
+
 describe("stdio transport", () => {
   it("lists tools over stdio with a clean stdout", async () => {
-    const transport = new StdioClientTransport({
-      command: join(here, "..", "node_modules", ".bin", "tsx"),
-      args: [join(here, "main.ts"), "--stdio"],
-      env: { ...(process.env as Record<string, string>), MCP_ALLOW_WRITES: "false" },
-      stderr: "pipe",
-    });
-    const client = new Client({ name: "blastradius-stdio-test", version: "0.0.0" });
-    await client.connect(transport);
+    const client = await connectStdio({});
     try {
       const { tools } = await client.listTools();
       expect(tools.map((t) => t.name)).toContain("search_nodes");
       expect(tools.map((t) => t.name)).not.toContain("record_finding");
+    } finally {
+      await client.close();
+    }
+  }, 30_000);
+});
+
+describe("FalkorDB unreachable", () => {
+  it("returns isError tool results instead of crashing", async () => {
+    // Port 1 refuses connections: the graph layer must throw and MCP must report it.
+    const client = await connectStdio({ FALKORDB_URL: "redis://127.0.0.1:1" });
+    try {
+      const res = await client.callTool({ name: "blast_radius", arguments: { tenant: "acme", service: "checkout" } });
+      expect(res.isError).toBe(true);
+      expect(JSON.stringify(res.content)).toMatch(/blast_radius failed on tenant acme/);
     } finally {
       await client.close();
     }
