@@ -1,33 +1,29 @@
 /**
- * SYNTHETIC weekly on-call rotation.
+ * SYNTHETIC weekly on-call rotation, carried by PERSONAS (never real people).
  *
- * Each team rotates one human per week across ALL the services it owns:
- * one `(Person)-[:ON_CALL_FOR {weekStart, weekStartTs}]->(Service)` edge per
- * person, service and week. The loader MERGEs on weekStart (CLAUDE.md lesson 1),
- * so weeks never collapse into one edge.
+ * Each team rotates one persona per week across ALL the services it owns:
+ * one `(Person {persona:true})-[:ON_CALL_FOR {weekStart, weekStartTs}]->(Service)`
+ * edge per persona, service and week. The loader MERGEs on weekStart
+ * (CLAUDE.md lesson 1), so weeks never collapse into one edge.
  *
  * Range: from 12 weeks before the newest PR through 2027-12-31, so the real
  * "this week" is covered whenever we demo, with no wall-clock dependence.
- * The pool is the team's most active members (up to 5); the order is a
- * seeded shuffle, so the rotation is deterministic but not alphabetical.
+ * The pool is the team's SRE / engineer personas; the order is a seeded
+ * shuffle, so the rotation is deterministic but not alphabetical.
  */
-import { uid } from "@blastradius/shared";
 import type { GraphBuilder } from "../graph-builder.ts";
 import type { Rng } from "../prng.ts";
 import { WEEK, isoDate, mondaysBetween } from "../time.ts";
 import type { RealIndex } from "./context.ts";
+import type { Personas } from "./personas.ts";
 import type { Teams } from "./teams.ts";
 
 export const ONCALL_UNTIL = "2027-12-31";
-export const ONCALL_POOL_SIZE = 5;
 
-/** team → rotation order (person slugs). */
-export function rotations(teams: Teams, rng: Rng): Map<string, string[]> {
+/** team → rotation order (persona uids). */
+export function rotations(teams: Teams, personas: Personas, rng: Rng): Map<string, string[]> {
   const out = new Map<string, string[]>();
-  for (const t of teams.seeds) {
-    const pool = (teams.members.get(t.slug) ?? []).slice(0, ONCALL_POOL_SIZE);
-    out.set(t.slug, rng.fork(t.slug).shuffle(pool));
-  }
+  for (const t of teams.seeds) out.set(t.slug, rng.fork(t.slug).shuffle(personas.pagerByTeam.get(t.slug) ?? []));
   return out;
 }
 
@@ -44,9 +40,9 @@ export function writeOnCall(g: GraphBuilder, ix: RealIndex, teams: Teams, rot: M
   for (const monday of mondaysBetween(ix.now - 12 * WEEK, ONCALL_UNTIL)) {
     const weekStart = isoDate(monday);
     for (const [svc, team] of [...teams.ownerOf.entries()].sort()) {
-      const person = onCallFor(rot, team, monday);
-      if (!person) continue;
-      g.edge("ON_CALL_FOR", uid("Person", person), uid("Service", svc), { weekStart, weekStartTs: monday });
+      const persona = onCallFor(rot, team, monday);
+      if (!persona) continue;
+      g.edge("ON_CALL_FOR", persona, `Service:${svc}`, { weekStart, weekStartTs: monday });
       n++;
     }
   }

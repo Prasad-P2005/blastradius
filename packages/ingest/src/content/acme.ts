@@ -2,8 +2,10 @@
  * acme (opentelemetry-demo): hand-written SYNTHETIC content.
  *
  * Every incident, ADR, ticket and thread below is fiction written for the
- * demo, but each one is anchored to REAL PRs, people and services through
- * {{placeholders}} (see synth/text.ts). The real facts we lean on:
+ * demo, but each one is anchored to REAL PRs and services through
+ * {{placeholders}} (see synth/text.ts). Everything a PERSON says or does in
+ * this fiction is done by a fictional persona (PERSONAS below): real git
+ * authors only carry real facts (their PRs) and are never named in prose. The real facts we lean on:
  *   - #1619 really replaced Redis with Valkey for the cart (2024-06);
  *   - #2859 / #3153 really moved the product catalogue into PostgreSQL;
  *   - #3564 really replaced Locust with k6, and #3873 really reverted it;
@@ -17,6 +19,24 @@ export const ACME_CONTENT: TenantContent = {
   issuePrefix: "ACME",
   templatedIssues: 16,
   templatedThreads: 9,
+
+  // Fictional people. Names are invented and checked against every real
+  // author name in the snapshot by the validator.
+  personas: [
+    { slug: "maya-okafor", name: "Maya Okafor", role: "SRE", team: "storefront" },
+    { slug: "tomas-varga", name: "Tomas Varga", role: "Frontend engineer", team: "storefront" },
+    { slug: "grace-holloway", name: "Grace Holloway", role: "Support lead", team: "storefront" },
+    { slug: "priya-raman", name: "Priya Raman", role: "SRE", team: "checkout-payments" },
+    { slug: "jonas-lindqvist", name: "Jonas Lindqvist", role: "Backend engineer", team: "checkout-payments" },
+    { slug: "elena-marsh", name: "Elena Marsh", role: "Engineering manager", team: "checkout-payments" },
+    { slug: "owen-achebe", name: "Owen Achebe", role: "Product manager", team: "checkout-payments" },
+    { slug: "kenji-arakawa", name: "Kenji Arakawa", role: "SRE", team: "cart-catalog" },
+    { slug: "sofia-brandt", name: "Sofia Brandt", role: "Backend engineer", team: "cart-catalog" },
+    { slug: "luis-ferreira", name: "Luis Ferreira", role: "SRE", team: "orders-data" },
+    { slug: "amara-nwosu", name: "Amara Nwosu", role: "Data engineer", team: "orders-data" },
+    { slug: "hana-kowal", name: "Hana Kowal", role: "Platform engineer", team: "platform" },
+    { slug: "ravi-desai", name: "Ravi Desai", role: "SRE", team: "platform" },
+  ],
 
   teams: [
     { slug: "storefront", name: "Storefront", slack: "#team-storefront", anchors: ["frontend", "frontend-proxy", "react-native-app", "image-provider", "ad", "recommendation"] },
@@ -242,11 +262,12 @@ export const ACME_CONTENT: TenantContent = {
       context:
         "The cart service keeps every shopping cart in a Redis container (redis-cart). In March 2024 Redis changed its licence from BSD to a dual source-available licence (RSALv2/SSPL). We only want to ship OSI-licensed components, and the Linux Foundation fork Valkey is wire-compatible with Redis 7.2.",
       decision:
-        "Replace Redis with Valkey for the cart store. Rename the container to valkey-cart, rename RedisCartStore to ValkeyCartStore in cart, and keep the StackExchange.Redis client, which works unchanged against Valkey. Done in {{pr:1619}} by {{author:1619}}.",
+        "Replace Redis with Valkey for the cart store. Rename the container to valkey-cart, rename RedisCartStore to ValkeyCartStore in cart, and keep the StackExchange.Redis client, which works unchanged against Valkey. Done in {{pr:1619}}.",
       consequences:
         "No change to the cart's data model or client library. The collector's redis receiver keeps scraping valkey-cart. Operators must use valkey-cli instead of redis-cli. Carts are still not persisted: losing valkey-cart loses carts, which is acceptable for the shop (see the follow-up ticket on persistence).",
       justifies: [1619],
       about: ["cart", "valkey-cart"],
+      decidedBy: ["kenji-arakawa", "sofia-brandt"],
     },
     {
       key: "ADR-002",
@@ -261,6 +282,7 @@ export const ACME_CONTENT: TenantContent = {
         "product-catalog now depends on astronomy-db; a slow database slows the home page, recommendations and checkout. Query telemetry must not break plan reuse (see {{inc:INC-2026-035}}). Monitoring runs as monitoring_user with pg_monitor.",
       justifies: [2859, 3153, 3577],
       about: ["product-catalog", "astronomy-db"],
+      decidedBy: ["sofia-brandt", "kenji-arakawa"],
     },
     {
       key: "ADR-003",
@@ -272,6 +294,7 @@ export const ACME_CONTENT: TenantContent = {
       consequences: "Superseded by {{adr:ADR-004}}: the switch was reverted six weeks later.",
       justifies: [3564],
       about: ["load-generator"],
+      decidedBy: ["hana-kowal"],
     },
     {
       key: "ADR-004",
@@ -281,11 +304,12 @@ export const ACME_CONTENT: TenantContent = {
       context:
         "After {{adr:ADR-003}} moved load generation to k6, we lost features people relied on: the Locust web UI for changing users live during demos, the flood-homepage and browser-traffic scenarios wired to flagd, and the Python span attributes our dashboards query. Re-implementing them in k6 would take longer than fixing Locust.",
       decision:
-        "Revert load-generator to Locust ({{pr:3873}}, {{author:3873}}) and fix the gevent/gRPC greenlet crash that was the main reason to leave ({{pr:4022}}). Keep the k6 scripts out of the tree.",
+        "Revert load-generator to Locust ({{pr:3873}}) and fix the gevent/gRPC greenlet crash that was the main reason to leave ({{pr:4022}}). Keep the k6 scripts out of the tree.",
       consequences:
         "Demo operators keep the familiar Locust UI behind frontend-proxy. The loadGeneratorFloodHomepage flag works again. We still carry the gevent compatibility flag and must test Locust upgrades carefully.",
       justifies: [3873, 4022],
       about: ["load-generator"],
+      decidedBy: ["hana-kowal", "ravi-desai"],
     },
     {
       key: "ADR-005",
@@ -299,6 +323,7 @@ export const ACME_CONTENT: TenantContent = {
       consequences: "checkout's PlaceOrder does not wait for accounting. Consumer lag is the main health signal for orders-data (see {{inc:INC-2026-036}}).",
       justifies: [3219, 3504, 3665],
       about: ["kafka", "accounting", "fraud-detection", "checkout"],
+      decidedBy: ["amara-nwosu", "luis-ferreira"],
     },
     {
       key: "ADR-006",
@@ -311,6 +336,7 @@ export const ACME_CONTENT: TenantContent = {
       consequences: "Anyone can trigger or stop a scenario from flagd-ui. A wrong default ships an outage (see {{inc:INC-2026-040}}), so flag defaults get a second reviewer.",
       justifies: [2830, 3305, 3625, 3931],
       about: ["flagd", "cart", "product-catalog"],
+      decidedBy: ["ravi-desai", "elena-marsh"],
     },
     {
       key: "ADR-007",
@@ -322,6 +348,7 @@ export const ACME_CONTENT: TenantContent = {
       consequences: "Anything that writes outside /tmp now fails fast at startup; new services should adopt the same setting.",
       justifies: [3658],
       about: ["checkout", "product-catalog", "shipping"],
+      decidedBy: ["priya-raman", "maya-okafor"],
     },
     {
       key: "ADR-008",
@@ -333,6 +360,7 @@ export const ACME_CONTENT: TenantContent = {
       consequences: "Smaller binaries, but the http exporter's buffers need memory headroom; checkout's 20 MiB limit was too tight ({{inc:INC-2026-037}}). Set GOMEMLIMIT on Go services.",
       justifies: [3618, 3619],
       about: ["checkout", "shipping"],
+      decidedBy: ["jonas-lindqvist", "elena-marsh"],
     },
   ],
 
@@ -349,7 +377,7 @@ export const ACME_CONTENT: TenantContent = {
     },
     {
       title: "Split repo-wide lockfile regenerations into per-service PRs",
-      body: "{{pr:4059}} regenerated lock files for payment, email, frontend, recommendation and others in one PR. If one of those services breaks we cannot roll back just that service. {{author:4059}}, could the next regeneration be split per service?",
+      body: "{{pr:4059}} regenerated lock files for payment, email, frontend, recommendation and others in one PR. If one of those services breaks we cannot roll back just that service. Could the next regeneration be split per service?",
       status: "open", priority: "P3", about: ["payment", "email", "frontend"], when: { pr: 4059, offsetDays: 2 },
     },
     {
@@ -387,11 +415,11 @@ export const ACME_CONTENT: TenantContent = {
       about: ["cart", "valkey-cart"],
       when: { daysAgo: 21 },
       lines: [
-        ["{{person:diogo-pacheco}}", "New-ish question: why did we move the cart cache from Redis to Valkey? Was it performance?"],
-        ["{{author:1619}}", "Not performance. Redis changed its licence in 2024 to a source-available one, and we only ship OSI-licensed components. Valkey is the Linux Foundation fork and speaks the same protocol, so {{pr:1619}} was basically an image swap plus renaming RedisCartStore to ValkeyCartStore."],
-        ["{{expert:cart}}", "And the cart code didn't change: StackExchange.Redis talks to Valkey fine. It's written up in {{adr:ADR-001}}."],
-        ["{{person:diogo-pacheco}}", "So the move to Valkey was about the licence. Is valkey-cart persisted?"],
-        ["{{author:1619}}", "No, still in-memory only; there's a ticket about persistence after {{inc:INC-2026-031}}."],
+        ["{{persona:tomas-varga}}", "New-ish question: why did we move the cart cache from Redis to Valkey? Was it performance?"],
+        ["{{persona:kenji-arakawa}}", "Not performance. Redis changed its licence in 2024 to a source-available one, and we only ship OSI-licensed components. Valkey is the Linux Foundation fork and speaks the same protocol, so {{pr:1619}} was basically an image swap plus renaming RedisCartStore to ValkeyCartStore."],
+        ["{{persona:sofia-brandt}}", "And the cart code didn't change: StackExchange.Redis talks to Valkey fine. It's written up in {{adr:ADR-001}}."],
+        ["{{persona:tomas-varga}}", "So the move to Valkey was about the licence. Is valkey-cart persisted?"],
+        ["{{persona:kenji-arakawa}}", "No, still in-memory only; there's a ticket about persistence after {{inc:INC-2026-031}}."],
       ],
     },
     // t-0002: answer for "why are we back on Locust?"
@@ -401,10 +429,10 @@ export const ACME_CONTENT: TenantContent = {
       about: ["load-generator"],
       when: { pr: 3873, offsetDays: -2 },
       lines: [
-        ["{{author:3564}}", "Proposing to revert the load generator from k6 back to Locust. We lost the Locust web UI, the flood-homepage flag and the Python span attributes the dashboards use."],
-        ["{{person:cijo-thomas}}", "Wasn't the whole reason for k6 the gevent greenlet crashes in Locust?"],
-        ["{{person:diogo-pacheco}}", "I can fix that with a gRPC/gevent compatibility flag; that's cheaper than rebuilding every scenario in k6."],
-        ["{{author:3564}}", "Then let's go back to Locust. Writing {{adr:ADR-004}} to supersede {{adr:ADR-003}}; the revert is {{prn:3873}}."],
+        ["{{persona:hana-kowal}}", "Proposing to revert the load generator from k6 back to Locust. Since {{pr:3564}} we lost the Locust web UI, the flood-homepage flag and the Python span attributes the dashboards use."],
+        ["{{persona:ravi-desai}}", "Wasn't the whole reason for k6 the gevent greenlet crashes in Locust?"],
+        ["{{persona:hana-kowal}}", "A gRPC/gevent compatibility flag fixes that, which is cheaper than rebuilding every scenario in k6."],
+        ["{{persona:ravi-desai}}", "Then let's go back to Locust. I'll write {{adr:ADR-004}} to supersede {{adr:ADR-003}}; the revert is {{prn:3873}}."],
       ],
     },
     {
@@ -413,9 +441,9 @@ export const ACME_CONTENT: TenantContent = {
       about: ["product-catalog", "astronomy-db"],
       when: { incident: "INC-2026-035", offsetHours: 26 },
       lines: [
-        ["{{author:3577}}", "Postmortem for {{inc:INC-2026-035}}: SQLCommenter made every query text unique. I'd like to keep the trace links, though."],
-        ["{{expert:product-catalog}}", "Keep it off by default and only enable it when the flag is on. {{adr:ADR-002}} says telemetry must not break plan reuse."],
-        ["{{person:diogo-pacheco}}", "Agreed. I'll add a PostgreSQL dashboard panel so we see plan churn before customers do."],
+        ["{{persona:sofia-brandt}}", "Postmortem for {{inc:INC-2026-035}}: since {{prn:3577}}, SQLCommenter made every query text unique. I'd like to keep the trace links, though."],
+        ["{{persona:kenji-arakawa}}", "Keep it off by default and only enable it behind a flag. {{adr:ADR-002}} says telemetry must not break plan reuse."],
+        ["{{persona:ravi-desai}}", "Agreed. I'll add a PostgreSQL dashboard panel so we see plan churn before customers do."],
       ],
     },
     {
@@ -424,9 +452,9 @@ export const ACME_CONTENT: TenantContent = {
       about: ["kafka", "accounting", "fraud-detection"],
       when: { pr: 3504, offsetDays: -1 },
       lines: [
-        ["{{author:3504}}", "We're seeing duplicate orders in accounting after Kafka redeliveries. Should we turn on transactions / exactly-once?"],
-        ["{{person:cijo-thomas}}", "Exactly-once across Kafka and Postgres is a lot of machinery for a demo shop. Dedupe on order id is simpler."],
-        ["{{author:3504}}", "OK: idempotent consumers it is. Writing it down in {{adr:ADR-005}}; fix is {{prn:3504}}."],
+        ["{{persona:amara-nwosu}}", "We're seeing duplicate orders in accounting after Kafka redeliveries. Should we turn on transactions / exactly-once?"],
+        ["{{persona:luis-ferreira}}", "Exactly-once across Kafka and Postgres is a lot of machinery for a demo shop. Dedupe on order id is simpler."],
+        ["{{persona:amara-nwosu}}", "OK: idempotent consumers it is. Writing it down in {{adr:ADR-005}}; the matching fix is {{prn:3504}}."],
       ],
     },
     {
@@ -435,9 +463,9 @@ export const ACME_CONTENT: TenantContent = {
       about: ["checkout"],
       when: { incident: "INC-2026-037", offsetHours: 6 },
       lines: [
-        ["{{author:3618}}", "{{inc:INC-2026-037}} was my exporter change, {{prn:3618}}. The http exporter needs more buffer than 20M allows."],
-        ["{{expert:checkout}}", "I'd rather set GOMEMLIMIT than double the limit; the small limit is part of the demo's story."],
-        ["{{author:3618}}", "Both, then: GOMEMLIMIT=16MiB and 40M limit. Recording it under {{adr:ADR-008}}."],
+        ["{{persona:priya-raman}}", "{{inc:INC-2026-037}} started after the exporter change in {{prn:3618}}. The http exporter needs more buffer than 20M allows."],
+        ["{{persona:jonas-lindqvist}}", "I'd rather set GOMEMLIMIT than double the limit; the small limit is part of the demo's story."],
+        ["{{persona:elena-marsh}}", "Both, then: GOMEMLIMIT=16MiB and a 40M limit. Recording it under {{adr:ADR-008}}."],
       ],
     },
     {
@@ -446,9 +474,20 @@ export const ACME_CONTENT: TenantContent = {
       about: ["flagd", "flagd-ui"],
       when: { daysAgo: 12 },
       lines: [
-        ["{{person:adii}}", "Who knows how the flagd failure scenarios are wired? I want to add one for payment."],
-        ["{{expert:flagd}}", "Add the flag to src/flagd/demo.flagd.json, default off, and generate the OpenFeature client. See {{adr:ADR-006}}."],
-        ["{{author:3931}}", "{{prn:3931}} is a good example: productCatalogLockContention touches flagd, product-catalog and astronomy-db."],
+        ["{{persona:owen-achebe}}", "Who knows how the flagd failure scenarios are wired? We want one for payment."],
+        ["{{persona:hana-kowal}}", "Add the flag to src/flagd/demo.flagd.json, default off, and generate the OpenFeature client. See {{adr:ADR-006}}."],
+        ["{{persona:ravi-desai}}", "{{pr:3931}} is a good example: productCatalogLockContention touches flagd, product-catalog and astronomy-db. Ask Blastradius who_knows for the people who wrote it."],
+      ],
+    },
+    {
+      channel: "#support",
+      title: "Customers report empty carts after a deploy",
+      about: ["cart", "valkey-cart"],
+      when: { incident: "INC-2026-031", offsetHours: 1 },
+      lines: [
+        ["{{persona:grace-holloway}}", "Support is getting tickets about carts emptying during checkout. Anything ongoing?"],
+        ["{{persona:maya-okafor}}", "Yes, {{inc:INC-2026-031}}: cart is restart-looping since the health-check change in {{prn:3487}}. valkey-cart is in-memory, so carts are lost."],
+        ["{{persona:grace-holloway}}", "Thanks, I'll post a status update and link the incident."],
       ],
     },
   ],
@@ -495,7 +534,7 @@ export const ACME_CONTENT: TenantContent = {
       alert: { service: "cart", metric: "cart_grpc_server_errors_ratio", value: "0.06", message: "cart GetCart error ratio 6% over 10m" },
       suspectPr: 3988,
       pastIncident: "INC-2026-040",
-      expert: "piotr-kielkowicz",
+      expert: "florian-bourgey", // who_knows #1 on cart from real authorship (personas carry the fictional edges)
       presenterNote:
         "Recall surfaces INC-2026-040 (cartFailure flag shipped at 10%) and its flagd runbook. Before `add-prs`, the top suspect is #3988. Run `pnpm --filter @blastradius/ingest add-prs --tenant acme` and ask again: #4087 (a new cart-service demo flag in ValkeyCartStore) appears on top. That is incremental re-ingest.",
     },

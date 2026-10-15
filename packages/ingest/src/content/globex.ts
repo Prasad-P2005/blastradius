@@ -1,7 +1,9 @@
 /**
  * globex (microservices-demo / Online Boutique): hand-written SYNTHETIC content.
  *
- * Fiction anchored to REAL history via {{placeholders}}. Real facts we lean on:
+ * Fiction anchored to REAL history via {{placeholders}}. People in the
+ * fiction are fictional personas (PERSONAS below); real git authors only
+ * carry real facts (their PRs) and are never named in prose. Real facts we lean on:
  *   - #1109 really added Spanner as a cart backend, #1578 really added AlloyDB;
  *   - #1102 / #1837 really removed the grpc-health-probe binary in favour of
  *     native Kubernetes gRPC probes;
@@ -17,6 +19,19 @@ export const GLOBEX_CONTENT: TenantContent = {
   issuePrefix: "GLOBEX",
   templatedIssues: 16,
   templatedThreads: 9,
+
+  personas: [
+    { slug: "lena-fischer", name: "Lena Fischer", role: "SRE", team: "storefront" },
+    { slug: "mateo-ruiz", name: "Mateo Ruiz", role: "Frontend engineer", team: "storefront" },
+    { slug: "ines-duarte", name: "Ines Duarte", role: "Product manager", team: "storefront" },
+    { slug: "kofi-osei", name: "Kofi Osei", role: "SRE", team: "checkout" },
+    { slug: "yuki-tanabe", name: "Yuki Tanabe", role: "Backend engineer", team: "checkout" },
+    { slug: "clara-novak", name: "Clara Novak", role: "Engineering manager", team: "checkout" },
+    { slug: "arjun-mehta", name: "Arjun Mehta", role: "SRE", team: "cart-catalog" },
+    { slug: "freya-lund", name: "Freya Lund", role: "Backend engineer", team: "cart-catalog" },
+    { slug: "zara-haddad", name: "Zara Haddad", role: "Platform engineer", team: "cart-catalog" },
+    { slug: "noah-petrov", name: "Noah Petrov", role: "Support lead", team: "storefront" },
+  ],
 
   teams: [
     { slug: "storefront", name: "Storefront", slack: "#gx-storefront", anchors: ["frontend", "ad", "shopping-assistant", "alloydb", "load-generator"] },
@@ -229,6 +244,7 @@ export const GLOBEX_CONTENT: TenantContent = {
         "cartservice carries three store implementations and must pick exactly one at startup (see {{inc:INC-2023-004}}). The default install needs no cloud account. Each backend needs its own docs and tests.",
       justifies: [1109, 1578],
       about: ["cart", "redis-cart"],
+      decidedBy: ["freya-lund", "arjun-mehta"],
     },
     {
       key: "ADR-002",
@@ -240,6 +256,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       consequences: "Smaller images, fewer CVEs; requires Kubernetes 1.24+. Probe timings must be tuned per service: the JVM adservice needs a longer start ({{inc:INC-2023-008}}).",
       justifies: [1102, 1837, 1840],
       about: ["ad", "cart", "checkout", "product-catalog"],
+      decidedBy: ["zara-haddad", "kofi-osei"],
     },
     {
       key: "ADR-003",
@@ -251,6 +268,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       consequences: "Much smaller attack surface; no shell for debugging (use ephemeral debug containers). Anything the binary needs at runtime (CA certificates, timezone data) must be copied in explicitly.",
       justifies: [1312, 2512],
       about: ["checkout", "frontend", "product-catalog", "shipping"],
+      decidedBy: ["zara-haddad", "clara-novak"],
     },
     {
       key: "ADR-004",
@@ -263,6 +281,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       consequences: "The assistant needs a Google API key and an AlloyDB instance, so it is off by default. Connection pooling to AlloyDB matters ({{inc:INC-2024-005}}).",
       justifies: [2466, 2490],
       about: ["shopping-assistant", "alloydb", "frontend"],
+      decidedBy: ["mateo-ruiz", "ines-duarte"],
     },
     {
       key: "ADR-005",
@@ -274,6 +293,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       consequences: "Vendor-neutral telemetry; one more component to run. Services must propagate trace context on every call.",
       justifies: [1167, 1180],
       about: ["frontend", "checkout"],
+      decidedBy: ["kofi-osei", "lena-fischer"],
     },
     {
       key: "ADR-006",
@@ -285,6 +305,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       consequences: "Faster, more portable adservice startup; no continuous profiling by default.",
       justifies: [2518],
       about: ["ad"],
+      decidedBy: ["lena-fischer"],
     },
     {
       key: "ADR-007",
@@ -296,6 +317,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       consequences: "LTS runtime; container defaults changed (the default HTTP port is now 8080, see {{inc:INC-2023-014}}).",
       justifies: [2102, 2264],
       about: ["cart"],
+      decidedBy: ["freya-lund"],
     },
   ],
 
@@ -350,10 +372,10 @@ export const GLOBEX_CONTENT: TenantContent = {
       about: ["cart", "redis-cart"],
       when: { daysAgo: 30 },
       lines: [
-        ["{{person:nim-jayawardena}}", "Why does cartservice have Spanner and AlloyDB stores at all? Redis is the default and that's what everyone runs."],
-        ["{{expert:cart}}", "Because people demo Online Boutique on Google Cloud and want to show managed databases. {{author:1109}} added Spanner in {{prn:1109}}, {{author:1578}} added AlloyDB in {{prn:1578}}."],
-        ["{{expert:cart}}", "But the default install must stay self-contained, so Redis (redis-cart) stays the default and the other stores are opt-in Kustomize components. It's {{adr:ADR-001}}."],
-        ["{{person:nim-jayawardena}}", "Got it: Spanner and AlloyDB are optional cart backends; Redis is the default cart store."],
+        ["{{persona:zara-haddad}}", "Why does cartservice have Spanner and AlloyDB stores at all? Redis is the default and that's what everyone runs."],
+        ["{{persona:freya-lund}}", "Because people demo Online Boutique on Google Cloud and want to show managed databases. Spanner came in {{pr:1109}}, AlloyDB in {{pr:1578}}."],
+        ["{{persona:arjun-mehta}}", "But the default install must stay self-contained, so Redis (redis-cart) stays the default and the other stores are opt-in Kustomize components. It's {{adr:ADR-001}}."],
+        ["{{persona:zara-haddad}}", "Got it: Spanner and AlloyDB are optional cart backends; Redis is the default cart store."],
       ],
     },
     // t-0002: answer for "who knows the shopping assistant / why AlloyDB?"
@@ -363,10 +385,10 @@ export const GLOBEX_CONTENT: TenantContent = {
       about: ["shopping-assistant", "alloydb"],
       when: { pr: 2490, offsetDays: 2 },
       lines: [
-        ["{{person:mathieu-benoit}}", "Who knows the shopping assistant? And why does it need AlloyDB instead of the products.json the catalog uses?"],
-        ["{{author:2466}}", "That's me, I built it in {{prn:2466}}. It does retrieval: product descriptions are embedded and stored in AlloyDB with pgvector, then Gemini answers using the closest products."],
-        ["{{author:2466}}", "products.json has no vector search, so the assistant needs a vector store; AlloyDB was the managed option. Written up in {{adr:ADR-004}}."],
-        ["{{person:mathieu-benoit}}", "Thanks. So the assistant needs AlloyDB for vector search and is off by default."],
+        ["{{persona:ines-duarte}}", "Who knows the shopping assistant? And why does it need AlloyDB instead of the products.json the catalog uses?"],
+        ["{{persona:mateo-ruiz}}", "I own it on our side. It does retrieval: since {{pr:2466}}, product descriptions are embedded and stored in AlloyDB with pgvector, then Gemini answers using the closest products. For the code history, ask who_knows about shopping-assistant."],
+        ["{{persona:lena-fischer}}", "products.json has no vector search, so the assistant needs a vector store; AlloyDB was the managed option. Written up in {{adr:ADR-004}}."],
+        ["{{persona:ines-duarte}}", "Thanks. So the assistant needs AlloyDB for vector search and is off by default."],
       ],
     },
     {
@@ -375,9 +397,9 @@ export const GLOBEX_CONTENT: TenantContent = {
       about: ["checkout", "shipping"],
       when: { pr: 2512, offsetDays: 1 },
       lines: [
-        ["{{person:olivier-bourgeois}}", "With {{prn:2512}} there's no shell in checkoutservice any more. How do we debug in prod?"],
-        ["{{author:2512}}", "kubectl debug with an ephemeral container. The smaller attack surface is worth it; see {{adr:ADR-003}}."],
-        ["{{person:olivier-bourgeois}}", "OK, but let's double-check CA certificates are copied in, or outbound TLS breaks."],
+        ["{{persona:yuki-tanabe}}", "With {{prn:2512}} there's no shell in checkoutservice any more. How do we debug in prod?"],
+        ["{{persona:kofi-osei}}", "kubectl debug with an ephemeral container. The smaller attack surface is worth it; see {{adr:ADR-003}}."],
+        ["{{persona:yuki-tanabe}}", "OK, but let's double-check CA certificates are copied in, or outbound TLS breaks."],
       ],
     },
     {
@@ -386,8 +408,19 @@ export const GLOBEX_CONTENT: TenantContent = {
       about: ["ad"],
       when: { incident: "INC-2023-008", offsetHours: 4 },
       lines: [
-        ["{{author:1837}}", "{{inc:INC-2023-008}} was my probe change. adservice needs ~40s before it answers health checks."],
-        ["{{expert:ad}}", "Add a startupProbe rather than a huge initialDelaySeconds. {{adr:ADR-002}} still holds."],
+        ["{{persona:lena-fischer}}", "{{inc:INC-2023-008}} started with the probe change in {{prn:1837}}. adservice needs ~40s before it answers health checks."],
+        ["{{persona:mateo-ruiz}}", "Add a startupProbe rather than a huge initialDelaySeconds. {{adr:ADR-002}} still holds."],
+      ],
+    },
+    {
+      channel: "#support",
+      title: "Shoppers can't add items to the cart",
+      about: ["cart"],
+      when: { incident: "INC-2023-014", offsetHours: 0 },
+      lines: [
+        ["{{persona:noah-petrov}}", "Lots of reports that Add to cart does nothing. Is cart down?"],
+        ["{{persona:arjun-mehta}}", "Yes, {{inc:INC-2023-014}}: after the .NET 8 move in {{prn:2102}} cartservice listens on the wrong port. Rolling back now."],
+        ["{{persona:clara-novak}}", "I'll keep stakeholders posted; next update in 15 minutes."],
       ],
     },
   ],
@@ -411,7 +444,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       alert: { service: "product-catalog", metric: "grpc_server_errors_ratio", value: "0.09", message: "productcatalogservice ListProducts errors 9%" },
       suspectPr: 2512,
       pastIncident: "INC-2023-012",
-      expert: "olivier-bourgeois",
+      expert: "mathieu-benoit", // who_knows #1 on product-catalog from real authorship
       presenterNote: "#2512 moved productcatalog to a scratch base image 11 days earlier; blast radius covers checkout, frontend and recommendation. ADR-003 explains why.",
     },
     {

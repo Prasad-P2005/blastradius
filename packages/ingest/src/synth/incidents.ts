@@ -7,16 +7,18 @@
  *   Incident (synthetic:true) -[:CAUSED_BY]-> PR (real)
  *            -[:AFFECTED]-> Service(s)
  *            -[:RESOLVED_BY]-> Runbook -[:APPLIES_TO]-> Service
- *            -[:RESPONDED_BY]-> Person (PR author + owning-team members)
+ *            -[:RESPONDED_BY]-> Person (fictional PERSONAS of the owning team;
+ *                               never the real PR author — prose describes the
+ *                               change, not who wrote it)
  *            -[:TRIGGERED_BY]-> Alert -[:FIRED_ON]-> Service
  *            -[:MENTIONS]-> whatever the prose references
  * Times: the incident starts a seeded number of hours after the PR merged.
  */
-import { uid } from "@blastradius/shared";
 import type { GraphBuilder } from "../graph-builder.ts";
 import type { Rng } from "../prng.ts";
 import { HOUR } from "../time.ts";
 import type { RealIndex } from "./context.ts";
+import { personaUid, type Personas } from "./personas.ts";
 import type { Teams } from "./teams.ts";
 import type { TextResolver } from "./text.ts";
 import type { IncidentSpec } from "./types.ts";
@@ -27,13 +29,13 @@ export interface IncidentFacts {
   service: string;
   startedAt: number;
   resolvedAt: number;
-  responders: string[]; // person slugs
+  responders: string[]; // persona uids, incident commander first
   causedBy: number;
   title: string;
   runbookUid: string;
 }
 
-export function writeIncidents(g: GraphBuilder, ix: RealIndex, teams: Teams, specs: IncidentSpec[], tr: TextResolver, rng: Rng): Map<string, IncidentFacts> {
+export function writeIncidents(g: GraphBuilder, ix: RealIndex, teams: Teams, personas: Personas, specs: IncidentSpec[], tr: TextResolver, rng: Rng): Map<string, IncidentFacts> {
   const out = new Map<string, IncidentFacts>();
   for (const spec of specs) tr.incidents.add(spec.key);
   for (const spec of specs) {
@@ -48,10 +50,13 @@ export function writeIncidents(g: GraphBuilder, ix: RealIndex, teams: Teams, spe
     const resolvedAt = startedAt + r.int(d0, d1) * 60_000;
     if (resolvedAt > ix.now) throw new Error(`${spec.key}: would end after the newest PR; pick an older cause PR`);
 
+    // Responders: the owning team's pager personas (shuffled), plus one more
+    // persona from the team (e.g. the manager) half the time.
     const team = teams.ownerOf.get(spec.service)!;
-    const teamMembers = (teams.members.get(team) ?? []).filter((p) => p !== pr.author);
-    const responders = [pr.author, ...(spec.responders ?? []), ...r.sample(teamMembers.slice(0, 5), r.int(1, 2))].filter((p, i, a) => a.indexOf(p) === i);
-    for (const p of responders) ix.person(p);
+    const pager = r.shuffle(personas.pagerByTeam.get(team) ?? []);
+    const others = (personas.byTeam.get(team) ?? []).filter((u) => !pager.includes(u));
+    const responders = [...pager.slice(0, 2), ...(spec.responders ?? []).map(personaUid), ...(others.length && r.chance(0.5) ? [r.pick(others)] : [])].filter((p, i, a) => a.indexOf(p) === i);
+    for (const p of responders) if (!personas.names.has(p)) throw new Error(`${spec.key}: unknown persona ${p}`);
 
     const title = tr.resolve(spec.title);
     const summary = tr.resolve(spec.summary);
@@ -62,7 +67,7 @@ export function writeIncidents(g: GraphBuilder, ix: RealIndex, teams: Teams, spe
     });
     for (const svc of [spec.service, ...(spec.neighbors ?? [])]) g.edge("AFFECTED", incUid, ix.serviceUid(svc));
     g.edge("CAUSED_BY", incUid, pr.uid);
-    for (const p of responders) g.edge("RESPONDED_BY", incUid, uid("Person", p));
+    for (const p of responders) g.edge("RESPONDED_BY", incUid, p);
     for (const m of [...title.mentions, ...summary.mentions, ...rootCause.mentions]) if (m !== incUid) g.edge("MENTIONS", incUid, m);
 
     const alertId = `alert-${spec.key.toLowerCase()}`;

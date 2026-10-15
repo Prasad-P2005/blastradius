@@ -16,13 +16,15 @@ function base(): { nodes: SnapshotNode[]; edges: SnapshotEdge[] } {
       { label: "Person", uid: "Person:jane-doe", props: { name: "Jane Doe", slug: "jane-doe", isBot: false, prCount: 1, firstSeenAt: T, lastSeenAt: T, synthetic: false } },
       { label: "Team", uid: "Team:core", props: { name: "Core", slug: "core", slack: "#core", synthetic: true } },
       { label: "Incident", uid: "Incident:INC-1", props: { key: "INC-1", title: "t", summary: "s", rootCause: "r", severity: "SEV2", status: "resolved", startedAt: T, resolvedAt: T + 1, synthetic: true } },
+      // a fictional persona carries the pager (real people only carry real facts)
+      { label: "Person", uid: "Person:persona-sam-ito", props: { name: "Sam Ito", slug: "persona-sam-ito", role: "SRE", isBot: false, persona: true, synthetic: true } },
     ],
     edges: [
       { type: "DEPENDS_ON", from: "Service:frontend", to: "Service:checkout", props: { protocol: "grpc", source: "compose.yaml" } },
       { type: "DEPENDS_ON", from: "Service:checkout", to: "Service:cart", props: { protocol: "grpc", source: "compose.yaml" } },
       { type: "AUTHORED", from: "Person:jane-doe", to: "PR:1" },
       { type: "OWNS", from: "Team:core", to: "Service:checkout" },
-      { type: "ON_CALL_FOR", from: "Person:jane-doe", to: "Service:checkout", props: { weekStart: isoDate(MON), weekStartTs: MON } },
+      { type: "ON_CALL_FOR", from: "Person:persona-sam-ito", to: "Service:checkout", props: { weekStart: isoDate(MON), weekStartTs: MON } },
       { type: "AFFECTED", from: "Incident:INC-1", to: "Service:checkout" },
     ],
   };
@@ -62,10 +64,30 @@ describe("validateGraph", () => {
   it("checks on-call coverage of the current week and Monday weekStarts", () => {
     const g = base();
     g.edges = g.edges.filter((e) => e.type !== "ON_CALL_FOR");
-    g.edges.push({ type: "ON_CALL_FOR", from: "Person:jane-doe", to: "Service:checkout", props: { weekStart: "2026-10-14", weekStartTs: Date.parse("2026-10-14T00:00:00Z") } });
+    g.edges.push({ type: "ON_CALL_FOR", from: "Person:persona-sam-ito", to: "Service:checkout", props: { weekStart: "2026-10-14", weekStartTs: Date.parse("2026-10-14T00:00:00Z") } });
     const errs = validateGraph(g.nodes, g.edges, { now: NOW }).join("\n");
     expect(errs).toMatch(/bad weekStart 2026-10-14/);
     expect(errs).toMatch(/nobody on call for Service:checkout/);
+  });
+});
+
+describe("persona policy", () => {
+  it("fictional acts need a persona, personas never author PRs, names never collide", () => {
+    const g = base();
+    g.edges.push({ type: "ON_CALL_FOR", from: "Person:jane-doe", to: "Service:cart", props: { weekStart: isoDate(MON), weekStartTs: MON } });
+    g.edges.push({ type: "RESPONDED_BY", from: "Incident:INC-1", to: "Person:jane-doe" });
+    g.edges.push({ type: "AUTHORED", from: "Person:persona-sam-ito", to: "PR:1" });
+    g.nodes.push({ label: "Person", uid: "Person:persona-jane-doe", props: { name: "Jane Doe", slug: "persona-jane-doe", role: "SRE", isBot: false, persona: true, synthetic: true } });
+    const errs = validateGraph(g.nodes, g.edges, { now: NOW }).join("\n");
+    expect(errs).toMatch(/ON_CALL_FOR Person:jane-doe→Service:cart: fictional acts must be done by a persona/);
+    expect(errs).toMatch(/RESPONDED_BY Incident:INC-1→Person:jane-doe: fictional acts/);
+    expect(errs).toMatch(/AUTHORED Person:persona-sam-ito→PR:1: personas never author/);
+    expect(errs).toMatch(/Person:persona-jane-doe: persona name collides with a real contributor/);
+  });
+  it("personas need a role, not git activity", () => {
+    const g = base();
+    delete g.nodes[7]!.props.role;
+    expect(validateGraph(g.nodes, g.edges, { now: NOW }).join("\n")).toMatch(/Person:persona-sam-ito: missing role/);
   });
 });
 

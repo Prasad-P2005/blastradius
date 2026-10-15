@@ -26,6 +26,7 @@ export const REQUIRED_PROPS: Partial<Record<NodeLabel, string[]>> = {
   Service: ["name", "slug", "language", "kind", "repoPath", "description", "tier"],
   File: ["path", "service", "language"],
   PR: ["number", "title", "sha", "mergedAt", "additions", "deletions", "filesChanged", "url", "isBot", "authorName"],
+  // real git authors; personas are checked against PERSONA_PROPS instead
   Person: ["name", "slug", "isBot", "prCount", "firstSeenAt", "lastSeenAt"],
   Team: ["name", "slug", "slack"],
   Issue: ["key", "title", "body", "status", "priority", "createdAt"],
@@ -35,6 +36,17 @@ export const REQUIRED_PROPS: Partial<Record<NodeLabel, string[]>> = {
   Incident: ["key", "title", "summary", "rootCause", "severity", "status", "startedAt", "resolvedAt"],
   Runbook: ["title", "steps", "createdAt"],
   Alert: ["title", "metric", "value", "message", "firedAt"],
+};
+
+/** Fictional personas (persona:true) carry a role instead of git activity. */
+export const PERSONA_PROPS = ["name", "slug", "role", "isBot"];
+
+/**
+ * Persona policy: these edges describe fictional acts by a person, so their
+ * Person end must be a persona. Real authors only ever carry real facts.
+ */
+export const PERSONA_ONLY_EDGES: Partial<Record<RelType, "from" | "to">> = {
+  POSTED: "from", ON_CALL_FOR: "from", RESPONDED_BY: "to", DECIDED_BY: "to",
 };
 
 /** Which prop holds the uid key for each label (so `PR:42` must have number 42). */
@@ -61,6 +73,7 @@ export const EDGE_SHAPES: Partial<Record<RelType, [readonly NodeLabel[], readonl
   CAUSED_BY: [["Incident"], ["PR"]],
   RESOLVED_BY: [["Incident"], ["Runbook"]],
   RESPONDED_BY: [["Incident"], ["Person"]],
+  POSTED: [["Person"], ["Thread", "Issue"]],
   TRIGGERED_BY: [["Incident"], ["Alert"]],
   APPLIES_TO: [["Runbook"], ["Service"]],
   FIRED_ON: [["Alert"], ["Service"]],
@@ -99,7 +112,9 @@ export function validateGraph(nodes: SnapshotNode[], edges: SnapshotEdge[], opts
     const keyProp = KEY_PROP[n.label];
     if (parsed && keyProp && String(n.props[keyProp]) !== parsed.key) err(`${n.uid}: ${keyProp}=${String(n.props[keyProp])} does not match uid key`);
     if (typeof n.props.synthetic !== "boolean") err(`${n.uid}: synthetic must be a boolean`);
-    for (const p of REQUIRED_PROPS[n.label] ?? []) {
+    const isPersona = n.label === "Person" && n.props.persona === true;
+    if (isPersona && (n.props.synthetic !== true || !parsed?.key.startsWith("persona-"))) err(`${n.uid}: personas need synthetic:true and a persona- key`);
+    for (const p of (isPersona ? PERSONA_PROPS : REQUIRED_PROPS[n.label]) ?? []) {
       const v = n.props[p];
       // repoPath may be "" for stock-image components (valkey-cart, redis-cart)
       if (v === undefined || v === null || (v === "" && p !== "repoPath")) err(`${n.uid}: missing ${p}`);
@@ -108,6 +123,13 @@ export function validateGraph(nodes: SnapshotNode[], edges: SnapshotEdge[], opts
     for (const [k, v] of Object.entries(n.props)) {
       if (k.endsWith("At") && !(Number.isInteger(v) && (v as number) > 1e12)) err(`${n.uid}: ${k} must be epoch-ms integer, got ${String(v)}`);
     }
+  }
+
+  // a persona must never share a name with a real contributor
+  const people = [...byUid.values()].filter((n) => n.label === "Person");
+  const realNames = new Set(people.filter((n) => n.props.persona !== true).map((n) => String(n.props.name).toLowerCase()));
+  for (const n of people) {
+    if (n.props.persona === true && realNames.has(String(n.props.name).toLowerCase())) err(`${n.uid}: persona name collides with a real contributor`);
   }
 
   const ownedServices = new Set<string>();
@@ -127,6 +149,10 @@ export function validateGraph(nodes: SnapshotNode[], edges: SnapshotEdge[], opts
     if (a && b && shape) {
       if (!shape[0].includes(a.label) || !shape[1].includes(b.label)) err(`${e.type}: ${a.label}→${b.label} not allowed (${e.from}→${e.to})`);
     }
+    const personaEnd = PERSONA_ONLY_EDGES[e.type];
+    const person = personaEnd === "from" ? a : personaEnd === "to" ? b : undefined;
+    if (person?.label === "Person" && person.props.persona !== true) err(`${e.type} ${e.from}→${e.to}: fictional acts must be done by a persona, not a real person`);
+    if (e.type === "AUTHORED" && a?.props.persona === true) err(`AUTHORED ${e.from}→${e.to}: personas never author real PRs`);
     if (e.type === "OWNS") ownedServices.add(e.to);
     if (e.type === "DEPENDS_ON" && (!e.props?.protocol || !e.props?.source)) err(`DEPENDS_ON ${e.from}→${e.to}: needs protocol and source`);
     if (e.type === "MODIFIES" && (!Number.isInteger(e.props?.additions) || !Number.isInteger(e.props?.deletions))) err(`MODIFIES ${e.from}→${e.to}: needs additions/deletions`);

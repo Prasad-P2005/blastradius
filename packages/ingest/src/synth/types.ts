@@ -25,7 +25,7 @@ export interface IncidentSpec {
   startedHoursAfterMerge?: [number, number];
   /** how long it lasted, minutes: [min, max] */
   durationMinutes?: [number, number];
-  /** extra responders (person slugs) besides the PR author and the owning team */
+  /** extra responders (persona slugs, without prefix) besides the owning team's personas */
   responders?: string[];
 }
 
@@ -39,7 +39,7 @@ export interface DecisionSpec {
   consequences: string;
   justifies: number[];
   about: string[];
-  /** person slugs; default = human authors of the justified PRs */
+  /** persona slugs (without prefix); default = the owning team's personas */
   decidedBy?: string[];
   /** also DECIDED_BY the team owning about[0] (default true) */
   decidedByTeam?: boolean;
@@ -57,6 +57,8 @@ export interface IssueSpec {
   priority: "P1" | "P2" | "P3" | "P4";
   about: string[];
   when: When;
+  /** persona slug (without prefix) who filed it; default = rotates over the owning team's personas */
+  postedBy?: string;
   /** days to resolution when status = done */
   resolvedAfterDays?: number;
 }
@@ -64,7 +66,7 @@ export interface IssueSpec {
 export interface ThreadSpec {
   channel: string;
   title: string;
-  /** [speaker placeholder or name, message] */
+  /** [speaker placeholder `{{persona:slug}}`, message]; the first speaker POSTED the thread */
   lines: [string, string][];
   about: string[];
   when: When;
@@ -78,16 +80,26 @@ export interface ScenarioSpec {
   alert?: { service: string; metric: string; value: string; message: string };
   suspectPr?: number;
   pastIncident?: string;
-  /** expected expert person slug; default = top human author on the alert service */
+  /** expected expert = a REAL author slug; default = top human author on the alert service */
   expert?: string;
   /** ask mode: uids that ask_company should return in its top 3 */
   sources?: string[];
   presenterNote: string;
 }
 
+/** A fictional person. Carries everything fictional a person does. */
+export interface PersonaSpec {
+  /** slug WITHOUT the "persona-" prefix */
+  slug: string;
+  name: string;
+  role: string;
+  team: string;
+}
+
 export interface TenantContent {
   /** ticket key prefix, e.g. "ACME" */
   issuePrefix: string;
+  personas: PersonaSpec[];
   teams: TeamSeed[];
   incidents: IncidentSpec[];
   decisions: DecisionSpec[];

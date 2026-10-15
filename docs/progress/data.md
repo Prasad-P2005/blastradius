@@ -9,6 +9,12 @@
 - verify-scenarios (real tools via runTool, model embeddings): 11/11 PASS on the canonical snapshot incl. "expected = #1"; also 11/11 with EMBEDDINGS=hash. acme still meets the SPEC bar after deltas; globex incident scenarios do not (window moves 6 weeks); documented.
 - agents request #2 resolved (expected = what ranks #1); agents' `scenarios` script: 43/43 checks pass.
 
+- Personas (2026-10-15): synth/personas.ts; 10 fictional personas per tenant carry threads, tickets, on-call, ADR sign-off
+  and incident response. Validator enforces the policy (persona-only edges, personas never AUTHORED, no name collisions).
+  On-call pool = SRE/engineer roles (word-boundary regex; "Engineering manager" excluded). Re-pinned two scenario experts
+  to who_knows #1 under real-facts-only ranking: acme-cart-errors → florian-bourgey, globex-catalog-errors → mathieu-benoit.
+  data:build deterministic; validate ✓; verify-scenarios 11/11; agents scenarios 43/43.
+
 ## In progress
 - nothing
 
