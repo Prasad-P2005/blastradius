@@ -68,7 +68,7 @@ ORDER BY betweenness DESC, hops ASC
 ```
 params: `{"service":"Service:cart"}`
 
-**Real output** (fixture, 2.6 ms): _2 services within 3 hops of Service:cart (dependents); top: checkout (betweenness 3)_
+**Real output** (fixture, 4 ms): _2 services within 3 hops of Service:cart (dependents); top: checkout (betweenness 3)_
 
 ```json
 {"service":"Service:checkout","name":"checkout","hops":1,"betweenness":3,"tier":1,"team":"Checkout Team"}
@@ -100,7 +100,7 @@ LIMIT $limit
 ```
 params: `{"limit":5}`
 
-**Real output** (fixture, 1.7 ms): _top chokepoint: checkout (betweenness 3, 1 dependents)_
+**Real output** (fixture, 0.8 ms): _top chokepoint: checkout (betweenness 3, 1 dependents)_
 
 ```json
 {"service":"Service:checkout","name":"checkout","betweenness":3,"dependents":1,"dependencies":5}
@@ -128,7 +128,7 @@ ORDER BY size DESC, community ASC
 ```
 params: `{}`
 
-**Real output** (fixture, 2.3 ms): _3 CDLP communities; largest has 6 services_
+**Real output** (fixture, 1.1 ms): _3 CDLP communities; largest has 6 services_
 
 ```json
 {"community":0,"services":["Service:frontend","Service:cart","Service:valkey-cart","Service:payment","… 2 more"],"names":["frontend","cart","valkey-cart","payment","… 2 more"],"size":6}
@@ -147,7 +147,7 @@ ORDER BY size DESC, community ASC
 ```
 params: `{}`
 
-**Real output** (fixture, 0.6 ms): _2 WCC communities; largest has 8 services_
+**Real output** (fixture, 0.5 ms): _2 WCC communities; largest has 8 services_
 
 ```json
 {"community":0,"services":["Service:frontend","Service:checkout","Service:cart","Service:valkey-cart","… 4 more"],"names":["frontend","checkout","cart","valkey-cart","… 4 more"],"size":8}
@@ -190,7 +190,7 @@ LIMIT $limit
 ```
 params: `{"service":"Service:cart","sinceDays":30,"includeBots":false,"limit":10}`
 
-**Real output** (fixture, 2.1 ms): _2 PRs in the 30 days before the newest PR touched Service:cart or its dependencies; newest suspect: PR #140 "cart: reduce Valkey connection pool size" by Alice Chen_
+**Real output** (fixture, 2 ms): _2 PRs in the 30 days before the newest PR touched Service:cart or its dependencies; newest suspect: PR #140 "cart: reduce Valkey connection pool size" by Alice Chen_
 
 ```json
 {"pr":"PR:140","number":140,"title":"cart: reduce Valkey connection pool size","mergedAt":1758801600000,"author":"Person:alice-chen","authorName":"Alice Chen","isBot":false,"service":"Service:cart","hops":0,"files":["src/cart/ValkeyCartStore.cs"],"additions":150,"deletions":4,"url":"https://github.com/example/shop/pull/140"}
@@ -203,9 +203,9 @@ Evidence paths: 2. First: `Person:alice-chen -[:AUTHORED]-> PR:140 -[:TOUCHES]->
 
 - **Question:** Who knows the service (or a free-text topic) best?
 - **Track:** 01, 03
-- **FalkorDB feature:** `algo.pageRank` combined with authorship activity; full-text on PR titles for topics
+- **FalkorDB feature:** `algo.pageRank` over the derived co-authorship graph, combined with authorship activity; full-text on PR titles for topics
 
-**Why PageRank is used this way.** `algo.pageRank(label, relType)` is directed and takes one label and one type. Authorship edges point Person → PR, so on the authorship graph alone every person gets the same teleport score (we verified: three authors with 1, 1 and 2 PRs all scored 0.333). So we run PageRank over the **whole company graph** (`null, null`): a person gains rank only through incoming edges (incidents they RESPONDED_BY, decisions DECIDED_BY them, threads/issues that MENTION them, findings SUPPORTED_BY them). That is a global "the organisation keeps pointing at this person" signal. We then combine it with service-specific activity:
+**Why PageRank is used this way.** `algo.pageRank(label, relType)` is directed and takes one label and one type. Authorship edges point Person → PR, so on the authorship graph alone every person gets the same teleport score (we verified: three authors with 1, 1 and 2 PRs all scored 0.333). So the loader derives a **co-authorship graph**, `(a:Person)-[:COLLABORATES_WITH {files}]->(b:Person)` in both directions for human authors whose PRs changed the same files, and we run `algo.pageRank('Person', 'COLLABORATES_WITH')` on it: a high score marks a hub of the real collaboration network, built from git history only. We then combine it with service-specific activity:
 
 ```
 activity  = # of the person's PRs that TOUCH the service (or match the topic)
@@ -224,8 +224,8 @@ MATCH (s:Service {uid: $service})
 OPTIONAL MATCH (:Person)-[w:ON_CALL_FOR]->(s)
 WHERE w.weekStart <= $today
 WITH s, max(w.weekStart) AS currentWeek
-// authority: PageRank over the whole company graph (see the comment in people.ts)
-CALL algo.pageRank(null, null) YIELD node, score
+// authority: PageRank over the co-authorship graph (see the comment at the top of this file)
+CALL algo.pageRank('Person', 'COLLABORATES_WITH') YIELD node, score
 WITH s, currentWeek, node AS person, score AS authority
 // real git authors only: fictional personas never author code
 WHERE person:Person AND NOT coalesce(person.persona, false)
@@ -262,11 +262,11 @@ LIMIT $limit
 ```
 params: `{"service":"Service:checkout","team":null,"includeBots":false,"onCallOnly":false,"today":"2026-10-15","limit":5}`
 
-**Real output** (fixture, 3.3 ms): _2 people know Service:checkout; top: Carol Diaz (2 PRs, score 2)_
+**Real output** (fixture, 3 ms): _2 people know Service:checkout; top: Carol Diaz (2 PRs, score 2)_
 
 ```json
-{"person":"Person:carol-diaz","name":"Carol Diaz","score":2,"prs":2,"pagerank":0.00764,"authority":1,"team":"Checkout Team","onCall":false,"onCallTeammate":"Person:persona-jo-okafor","lastActiveAt":1755777600000,"isBot":false}
-{"person":"Person:bob-patel","name":"Bob Patel","score":1,"prs":1,"pagerank":0.00764,"authority":1,"team":"Checkout Team","onCall":false,"onCallTeammate":"Person:persona-jo-okafor","lastActiveAt":1758974400000,"isBot":false}
+{"person":"Person:carol-diaz","name":"Carol Diaz","score":2,"prs":2,"pagerank":0.31246,"authority":1,"team":"Checkout Team","onCall":false,"onCallTeammate":"Person:persona-jo-okafor","lastActiveAt":1755777600000,"isBot":false}
+{"person":"Person:bob-patel","name":"Bob Patel","score":1,"prs":1,"pagerank":0.31246,"authority":1,"team":"Checkout Team","onCall":false,"onCallTeammate":"Person:persona-jo-okafor","lastActiveAt":1758974400000,"isBot":false}
 ```
 Evidence paths: 2. First: `Person:carol-diaz -[:AUTHORED]-> PR:130 -[:TOUCHES]-> Service:checkout`
 
@@ -281,8 +281,8 @@ WITH collect(hit) AS topicPrs
 OPTIONAL MATCH (:Person)-[w:ON_CALL_FOR]->(:Service)
 WHERE w.weekStart <= $today
 WITH topicPrs, max(w.weekStart) AS currentWeek
-// authority: PageRank over the whole company graph (see the comment in people.ts)
-CALL algo.pageRank(null, null) YIELD node, score
+// authority: PageRank over the co-authorship graph (see the comment at the top of this file)
+CALL algo.pageRank('Person', 'COLLABORATES_WITH') YIELD node, score
 WITH topicPrs, currentWeek, node AS person, score AS authority
 // real git authors only: fictional personas never author code
 WHERE person:Person AND NOT coalesce(person.persona, false)
@@ -320,10 +320,10 @@ LIMIT $limit
 ```
 params: `{"service":null,"topic":"valkey | valkey* | pool | pool*","team":null,"includeBots":false,"onCallOnly":false,"today":"2026-10-15","limit":5}`
 
-**Real output** (fixture, 2.4 ms): _1 people know "valkey pool"; top: Alice Chen (2 PRs, score 2)_
+**Real output** (fixture, 2.3 ms): _1 people know "valkey pool"; top: Alice Chen (2 PRs, score 2)_
 
 ```json
-{"person":"Person:alice-chen","name":"Alice Chen","score":2,"prs":2,"pagerank":0.00764,"authority":1,"team":"Cart Team","onCall":false,"onCallTeammate":"Person:persona-sam-rivera","lastActiveAt":1758801600000,"isBot":false}
+{"person":"Person:alice-chen","name":"Alice Chen","score":2,"prs":2,"pagerank":0.04689,"authority":1,"team":"Cart Team","onCall":false,"onCallTeammate":"Person:persona-sam-rivera","lastActiveAt":1758801600000,"isBot":false}
 ```
 Evidence paths: 1. First: `Person:alice-chen -[:AUTHORED]-> PR:140 -[:TOUCHES]-> Service:cart`
 
@@ -353,7 +353,7 @@ ORDER BY name
 ```
 params: `{"service":"Service:cart","at":"2025-09-24"}`
 
-**Real output** (fixture, 1.8 ms): _Jo Okafor on call for Service:cart (week of 2025-09-22)_
+**Real output** (fixture, 1.3 ms): _Jo Okafor on call for Service:cart (week of 2025-09-22)_
 
 ```json
 {"person":"Person:persona-jo-okafor","name":"Jo Okafor","role":"SRE","persona":true,"weekStart":"2025-09-22","team":"Checkout Team","service":"Service:cart"}
@@ -399,7 +399,7 @@ RETURN s.uid AS service, s.name AS name, s.kind AS kind, s.tier AS tier, s.langu
 ```
 params: `{"service":"Service:cart"}`
 
-**Real output** (fixture, 5.1 ms): _cart: owned by Cart Team, 1 dependencies, 2 dependents, 1 runbooks, 1 incidents_
+**Real output** (fixture, 5.6 ms): _cart: owned by Cart Team, 1 dependencies, 2 dependents, 1 runbooks, 1 incidents_
 
 ```json
 {"service":"Service:cart","name":"cart","kind":"service","tier":1,"language":"csharp","description":"Shopping cart service backed by Valkey","team":"Team:cart-team","teamName":"Cart Team","owners":[{"uid":"Person:alice-chen","name":"Alice Chen"},{"uid":"Person:persona-sam-rivera","name":"Sam Rivera"},{"uid":"Person:persona-priya-nair","name":"Priya Nair"}],"dependsOn":[{"uid":"Service:valkey-cart","name":"valkey-cart","protocol":"redis"}],"dependents":[{"uid":"Service:frontend","name":"frontend","protocol":"grpc"},{"uid":"Service:checkout","name":"checkout","protocol":"grpc"}],"runbooks":[{"uid":"Runbook:valkey-connection-exhaustion","title":"Valkey connection exhaustion","steps":["Check cart pool metrics","Raise ValkeyPoolSize to 50","Restart cart pods one at a time"]}],"docs":[{"uid":"Doc:adr-003-valkey","title":"ADR-003: Valkey for cart storage","kind":"adr"},{"uid":"Doc:howto-cart-debugging","title":"How to debug cart latency","kind":"howto"}],"recentIncidents":[{"uid":"Incident:INC-2025-007","title":"Cart 5xx after Valkey connection exhaustion","severity":"SEV2","startedAt":1746273600000}],"decisions":[{"uid":"Decision:ADR-003","title":"Move cart session storage from Redis to Valkey","status":"accepted"}]}
@@ -440,7 +440,7 @@ LIMIT $limit
 ```
 params: `{"service":"Service:cart","limit":5}`
 
-**Real output** (fixture, 4.2 ms): _2 past incidents on Service:cart or its neighbours; latest: Incident:INC-2025-007 "Cart 5xx after Valkey connection exhaustion" (runbook Valkey connection exhaustion)_
+**Real output** (fixture, 4.5 ms): _2 past incidents on Service:cart or its neighbours; latest: Incident:INC-2025-007 "Cart 5xx after Valkey connection exhaustion" (runbook Valkey connection exhaustion)_
 
 ```json
 {"incident":"Incident:INC-2025-007","title":"Cart 5xx after Valkey connection exhaustion","severity":"SEV2","status":"resolved","startedAt":1746273600000,"service":"Service:cart","hops":0,"causedBy":"PR:101","runbook":"Runbook:valkey-connection-exhaustion","runbookTitle":"Valkey connection exhaustion","runbookSteps":["Check cart pool metrics","Raise ValkeyPoolSize to 50","Restart cart pods one at a time"],"responders":["Person:persona-sam-rivera","Person:persona-priya-nair"],"synthetic":true,"sessionId":null}
@@ -484,7 +484,7 @@ LIMIT $k
 ```
 params: `{"text":"cart returns 503, connection pool exhausted","vec":"<384-dim embedding of $text>","candidates":15,"k":5,"service":"Service:cart"}`
 
-**Real output** (fixture, 9.3 ms): _2 similar incidents; closest: Incident:INC-2025-007 "Cart 5xx after Valkey connection exhaustion" (similarity 0.546)_
+**Real output** (fixture, 6.7 ms): _2 similar incidents; closest: Incident:INC-2025-007 "Cart 5xx after Valkey connection exhaustion" (similarity 0.546)_
 
 ```json
 {"incident":"Incident:INC-2025-007","title":"Cart 5xx after Valkey connection exhaustion","similarity":0.546,"distance":0.4543,"severity":"SEV2","service":"Service:cart","services":["Service:cart","Service:valkey-cart"],"onService":true,"causedBy":"PR:101","runbook":"Runbook:valkey-connection-exhaustion","runbookTitle":"Valkey connection exhaustion","runbookSteps":["Check cart pool metrics","Raise ValkeyPoolSize to 50","Restart cart pods one at a time"],"responders":["Person:persona-sam-rivera","Person:persona-priya-nair"],"sessionId":null}
@@ -525,7 +525,7 @@ ORDER BY distance ASC
 ```
 params: `{"text":"why did we move cart storage to valkey","vec":"<384-dim embedding of $text>","limit":3}`
 
-**Real output** (fixture, 3.3 ms): _Decision:ADR-003 "Move cart session storage from Redis to Valkey": doc Doc:adr-003-valkey, 1 PRs, 1 incidents_
+**Real output** (fixture, 7.5 ms): _Decision:ADR-003 "Move cart session storage from Redis to Valkey": doc Doc:adr-003-valkey, 1 PRs, 1 incidents_
 
 ```json
 {"decision":"Decision:ADR-003","title":"Move cart session storage from Redis to Valkey","status":"accepted","decidedAt":1741089600000,"distance":0.4305,"doc":"Doc:adr-003-valkey","prs":["PR:101"],"incidents":["Incident:INC-2025-007"],"decidedBy":["Team:cart-team","Person:persona-priya-nair"],"services":["Service:cart"],"similarity":0.57}
@@ -558,7 +558,7 @@ ORDER BY distance ASC
 ```
 params: `{"uid":"Incident:INC-2025-007","limit":3}`
 
-**Real output** (fixture, 2.5 ms): _Decision:ADR-003 "Move cart session storage from Redis to Valkey": doc Doc:adr-003-valkey, 1 PRs, 1 incidents_
+**Real output** (fixture, 2.8 ms): _Decision:ADR-003 "Move cart session storage from Redis to Valkey": doc Doc:adr-003-valkey, 1 PRs, 1 incidents_
 
 ```json
 {"decision":"Decision:ADR-003","title":"Move cart session storage from Redis to Valkey","status":"accepted","decidedAt":1741089600000,"distance":0,"doc":"Doc:adr-003-valkey","prs":["PR:101"],"incidents":["Incident:INC-2025-007"],"decidedBy":["Team:cart-team","Person:persona-priya-nair"],"services":["Service:cart"],"similarity":1}
@@ -642,7 +642,7 @@ LIMIT $limit
 ```
 params: `{"query":"valkey | valkey*","limit":10}`
 
-**Real output** (fixture, 0.8 ms): _9 matches for "valkey"; best: PR:101_
+**Real output** (fixture, 0.7 ms): _9 matches for "valkey"; best: PR:101_
 
 ```json
 {"uid":"PR:101","label":"PR","name":"Move cart storage from Redis to Valkey","score":4}
@@ -699,7 +699,7 @@ ORDER BY distance ASC
 ```
 params: `{"text":"Why did we move the cart to Valkey and what went wrong?","vec":"<384-dim embedding of $text>","k":6}`
 
-**Real output** (fixture, 14.8 ms): _6 sources for "Why did we move the cart to Valkey and what went wrong?"; best: Incident Incident:INC-2025-007 "Cart 5xx after Valkey connection exhaustion" (similarity 0.564)_
+**Real output** (fixture, 15.2 ms): _6 sources for "Why did we move the cart to Valkey and what went wrong?"; best: Incident Incident:INC-2025-007 "Cart 5xx after Valkey connection exhaustion" (similarity 0.564)_
 
 ```json
 {"source":"Incident:INC-2025-007","label":"Incident","title":"Cart 5xx after Valkey connection exhaustion","similarity":0.564,"distance":0.4361,"snippet":"Cart returned HTTP 503 for 40 minutes; checkout failed for users adding items.","related":[{"uid":"Service:cart","label":"Service","name":"cart","rel":"AFFECTED"},{"uid":"Service:valkey-cart","label":"Service","name":"valkey-cart","rel":"AFFECTED"},{"uid":"Person:persona-sam-rivera","label":"Person","name":"Sam Rivera","rel":"RESPONDED_BY"},{"uid":"Person:persona-priya-nair","label":"Person","name":"Priya Nair","rel":"RESPONDED_BY"},"… 6 more"]}
@@ -786,9 +786,9 @@ ON CREATE SET to.uid = 'Agent:' + $handTo, to.title = $handToTitle
 CREATE (f)-[:HANDED_TO]->(to)
 RETURN f.uid AS uid
 ```
-params (abridged): `{"sessionId":"docs_session_a","agent":"triage","agentTitle":"Triage","uid":"Finding:f_345da074e4d8","props":"…","text":"Cart failure breaks checkout and frontend","vec":"<384-dim embedding of $text>","about_Service":["Service:cart"],"evidence_Service":["Service:checkout","Service:frontend"],"handTo":"investigator","handToTitle":"Investigator"}`
+params (abridged): `{"sessionId":"docs_session_a","agent":"triage","agentTitle":"Triage","uid":"Finding:f_da35ad330c4a","props":"…","text":"Cart failure breaks checkout and frontend","vec":"<384-dim embedding of $text>","about_Service":["Service:cart"],"evidence_Service":["Service:checkout","Service:frontend"],"handTo":"investigator","handToTitle":"Investigator"}`
 
-Output finding: `{"id":"f_345da074e4d8","uid":"Finding:f_345da074e4d8","sessionId":"docs_session_a","agent":"triage","kind":"impact","claim":"Cart failure breaks checkout and frontend","confidence":0.9,"about":["Service:cart"],"evidence":["Service:checkout","Service:frontend"],"cypher":["// Q1 \"What else breaks if $service fails?\"\n// 1) betweenness centrality over the whole dependency graph (chokepoints score high)\nCALL algo.betweenness({node…"],"handTo":"investigator","createdAt":"2026-10-15T10:29:51.730Z"}`
+Output finding: `{"id":"f_da35ad330c4a","uid":"Finding:f_da35ad330c4a","sessionId":"docs_session_a","agent":"triage","kind":"impact","claim":"Cart failure breaks checkout and frontend","confidence":0.9,"about":["Service:cart"],"evidence":["Service:checkout","Service:frontend"],"cypher":["// Q1 \"What else breaks if $service fails?\"\n// 1) betweenness centrality over the whole dependency graph (chokepoints score high)\nCALL algo.betweenness({node…"],"handTo":"investigator","createdAt":"2026-10-15T11:12:02.414Z"}`
 
 ### read_handoffs
 
@@ -802,12 +802,12 @@ RETURN f.id AS finding, f.uid AS uid, from.name AS from, f.kind AS kind, f.claim
        f.createdAt AS createdAt, p AS path
 ORDER BY createdAt ASC
 ```
-**Real output** (fixture, 1.2 ms): _1 findings handed to investigator (from triage)_
+**Real output** (fixture, 1.4 ms): _1 findings handed to investigator (from triage)_
 
 ```json
-{"finding":"f_345da074e4d8","uid":"Finding:f_345da074e4d8","from":"triage","kind":"impact","claim":"Cart failure breaks checkout and frontend","confidence":0.9,"about":["Service:cart"],"evidence":["Service:checkout","Service:frontend"],"cypher":["// Q1 \"What else breaks if $service fails?\"\n// 1) betweenness centrality over the whole dependency graph (chokepoints score high)\nCALL algo.betweenness({node…"],"createdAt":1792060191730}
+{"finding":"f_da35ad330c4a","uid":"Finding:f_da35ad330c4a","from":"triage","kind":"impact","claim":"Cart failure breaks checkout and frontend","confidence":0.9,"about":["Service:cart"],"evidence":["Service:checkout","Service:frontend"],"cypher":["// Q1 \"What else breaks if $service fails?\"\n// 1) betweenness centrality over the whole dependency graph (chokepoints score high)\nCALL algo.betweenness({node…"],"createdAt":1792062722414}
 ```
-Evidence paths: 1. First: `Agent:triage -[:WROTE]-> Finding:f_345da074e4d8 -[:HANDED_TO]-> Agent:investigator`
+Evidence paths: 1. First: `Agent:triage -[:WROTE]-> Finding:f_da35ad330c4a -[:HANDED_TO]-> Agent:investigator`
 
 ### closeIncident: procedural memory
 
@@ -885,11 +885,11 @@ ORDER BY createdAt DESC
 ```
 params: `{"sessionId":"docs_session_b","service":"Service:cart","k":10,"text":"cart valkey pool errors","vec":"<384-dim embedding of $text>"}`
 
-**Real output** (fixture, 4.5 ms): _4 memories from earlier sessions (3 incidents, 1 findings)_
+**Real output** (fixture, 4.2 ms): _4 memories from earlier sessions (3 incidents, 1 findings)_
 
 ```json
-{"kind":"incident","uid":"Incident:INC-docs_session_a","title":"Cart Valkey pool too small after PR 140","summary":"Cart 5xx at 12% because PR 140 shrank the Valkey connection pool.","sessionId":"docs_session_a","agent":null,"runbook":{"uid":"Runbook:restore-valkey-pool-size-docs_session_a","title":"Restore Valkey pool size","steps":["Revert PR 140","Restart cart pods"]},"similarity":0.713,"createdAt":"2026-10-15T10:29:51.740Z"}
-{"kind":"finding","uid":"Finding:f_345da074e4d8","title":"Cart failure breaks checkout and frontend","summary":"impact","sessionId":"docs_session_a","agent":"triage","runbook":null,"similarity":0.4,"createdAt":"2026-10-15T10:29:51.730Z"}
+{"kind":"incident","uid":"Incident:INC-docs_session_a","title":"Cart Valkey pool too small after PR 140","summary":"Cart 5xx at 12% because PR 140 shrank the Valkey connection pool.","sessionId":"docs_session_a","agent":null,"runbook":{"uid":"Runbook:restore-valkey-pool-size-docs_session_a","title":"Restore Valkey pool size","steps":["Revert PR 140","Restart cart pods"]},"similarity":0.713,"createdAt":"2026-10-15T11:12:02.424Z"}
+{"kind":"finding","uid":"Finding:f_da35ad330c4a","title":"Cart failure breaks checkout and frontend","summary":"impact","sessionId":"docs_session_a","agent":"triage","runbook":null,"similarity":0.4,"createdAt":"2026-10-15T11:12:02.414Z"}
 {"kind":"incident","uid":"Incident:INC-2025-019","title":"Checkout payment timeouts during peak","summary":"Checkout requests timed out because payment retries piled up on the card processor.","sessionId":null,"agent":null,"runbook":{"uid":"Runbook:payment-timeout-rollback","title":"Payment timeout rollback","steps":["Disable payment retries via flagd","Roll back the payment deployment","Drain the checkout queue"]},"similarity":0.152,"createdAt":"2025-08-06T13:30:00.000Z"}
 {"kind":"incident","uid":"Incident:INC-2025-007","title":"Cart 5xx after Valkey connection exhaustion","summary":"Cart returned HTTP 503 for 40 minutes; checkout failed for users adding items.","sessionId":null,"agent":null,"runbook":{"uid":"Runbook:valkey-connection-exhaustion","title":"Valkey connection exhaustion","steps":["Check cart pool metrics","Raise ValkeyPoolSize to 50","Restart cart pods one at a time"]},"similarity":0.647,"createdAt":"2025-05-03T12:40:00.000Z"}
 ```
@@ -915,7 +915,7 @@ RETURN s.sessionId AS sessionId, s.uid AS uid, s.mode AS mode, s.question AS que
 ORDER BY startedAt DESC
 LIMIT $limit
 ```
-Output of listGraphSessions: `[{"sessionId":"docs_session_b","uid":"Session:docs_session_b","mode":"incident","question":"cart errors again","startedAt":1792060191747,"status":"open","episodes":0,"findings":0},{"sessionId":"docs_session_a","uid":"Session:docs_session_a","mode":"incident","question":"cart 5xx at 12%","startedAt":1792060191725,"status":"closed","episodes":1,"findings":1}]`
+Output of listGraphSessions: `[{"sessionId":"docs_session_b","uid":"Session:docs_session_b","mode":"incident","question":"cart errors again","startedAt":1792062722431,"status":"open","episodes":0,"findings":0},{"sessionId":"docs_session_a","uid":"Session:docs_session_a","mode":"incident","question":"cart 5xx at 12%","startedAt":1792062722409,"status":"closed","episodes":1,"findings":1}]`
 
 ## People and personas
 
@@ -1044,7 +1044,7 @@ RETURN labels(n)[0] AS label, count(n) AS count
 MATCH ()-[r]->()
 RETURN type(r) AS type, count(r) AS count
 ```
-Output: `{"labels":{"Episode":1,"Runbook":3,"Decision":1,"Agent":2,"Doc":2,"Finding":1,"Person":10,"Session":2,"Thread":1,"PR":10,"Issue":1,"Team":4,"Service":9,"Incident":3,"Alert":1,"File":8},"rels":{"DECIDED_BY":2,"APPLIES_TO":3,"ON_CALL_FOR":5,"MODIFIES":13,"DOCUMENTED_IN":1,"PRODUCED":1,"MEMBER_OF":9,"DEPENDS_ON":10,"INVESTIGATES":3,"PART_OF":8,"POSTED":2,"OWNS":9,"FIRED_ON":1,"WROTE":1,"SUPPORTED_BY":2,"JUSTIFIES":1,"CAUSED_BY":3,"AUTHORED":10,"TOUCHES":12,"ABOUT":6,"RESPONDED_BY":4,"AFFECTED":5,"RESOLVED_BY":3,"HAS_EPISODE":1,"TRIGGERED_BY":1,"HANDED_TO":1,"MENTIONS":5}}`
+Output: `{"labels":{"Agent":2,"PR":10,"Issue":1,"File":8,"Episode":1,"Person":10,"Team":4,"Session":2,"Finding":1,"Service":9,"Doc":2,"Thread":1,"Decision":1,"Runbook":3,"Alert":1,"Incident":3},"rels":{"CAUSED_BY":3,"RESPONDED_BY":4,"MENTIONS":5,"RESOLVED_BY":3,"FIRED_ON":1,"JUSTIFIES":1,"PART_OF":8,"OWNS":9,"WROTE":1,"ABOUT":6,"POSTED":2,"SUPPORTED_BY":2,"HANDED_TO":1,"TOUCHES":12,"AUTHORED":10,"APPLIES_TO":3,"AFFECTED":5,"HAS_EPISODE":1,"ON_CALL_FOR":5,"COLLABORATES_WITH":2,"DECIDED_BY":2,"MODIFIES":13,"DOCUMENTED_IN":1,"TRIGGERED_BY":1,"PRODUCED":1,"INVESTIGATES":3,"MEMBER_OF":9,"DEPENDS_ON":10}}`
 
 ### memoryInspector
 
@@ -1089,7 +1089,7 @@ OPTIONAL MATCH ip = (s)-[:INVESTIGATES]->()
 RETURN s, collect(DISTINCT sp) + collect(DISTINCT np) + collect(DISTINCT pp) + collect(DISTINCT dp)
        + collect(DISTINCT wp) + collect(DISTINCT ip) AS paths
 ```
-Output for session A: 1 episodes, handoffs `[{"findingId":"f_345da074e4d8","from":"triage","to":"investigator","claim":"Cart failure breaks checkout and frontend"}]`, subgraph 9 nodes / 9 edges of types `HAS_EPISODE, PRODUCED, SUPPORTED_BY, ABOUT, HANDED_TO, WROTE, INVESTIGATES`.
+Output for session A: 1 episodes, handoffs `[{"findingId":"f_da35ad330c4a","from":"triage","to":"investigator","claim":"Cart failure breaks checkout and frontend"}]`, subgraph 9 nodes / 9 edges of types `HAS_EPISODE, PRODUCED, SUPPORTED_BY, ABOUT, HANDED_TO, WROTE, INVESTIGATES`.
 
 ## Schema and indexes
 
@@ -1145,7 +1145,7 @@ CREATE VECTOR INDEX FOR (n:Finding) ON (n.embedding) OPTIONS {dimension:384, sim
 
 ## Loading
 
-`loadSnapshot(tenant, snap, {reset, embed})`: reset (GRAPH.DELETE) → ensureSchema → nodes by label → relationships by (type, source label, target label) → derive TOUCHES → embeddings. Batches: 500 nodes, 1000 edges, 50 vectors per query, each with `TIMEOUT 60000`. Fixture load: `{"nodes":51,"edges":95,"touches":12,"embedded":7,"ms":764}`.
+`loadSnapshot(tenant, snap, {reset, embed})`: reset (GRAPH.DELETE) → ensureSchema → nodes by label → relationships by (type, source label, target label) → derive TOUCHES → embeddings. Batches: 500 nodes, 1000 edges, 50 vectors per query, each with `TIMEOUT 60000`. Fixture load: `{"nodes":51,"edges":95,"touches":12,"collaborations":2,"embedded":7,"ms":777}`.
 
 Node upsert (per label, e.g. Service):
 ```cypher
@@ -1203,4 +1203,4 @@ The tenant's "now" (used by suspect_changes):
 MATCH (pr:PR)
 RETURN max(pr.mergedAt) AS newest
 ```
-`ingestDelta` (incremental re-ingest, Track 03) runs the same upserts without a reset, derives TOUCHES only for the delta's PRs and embeds only the delta's text nodes. Fixture delta (PR 150): `{"nodes":1,"edges":2,"touches":1,"embedded":0,"ms":33}`; afterwards `newestPrAt` = 2025-10-01T12:00:00.000Z.
+`ingestDelta` (incremental re-ingest, Track 03) runs the same upserts without a reset, derives TOUCHES only for the delta's PRs and embeds only the delta's text nodes. Fixture delta (PR 150): `{"nodes":1,"edges":2,"touches":1,"collaborations":2,"embedded":0,"ms":32}`; afterwards `newestPrAt` = 2025-10-01T12:00:00.000Z.

@@ -110,8 +110,8 @@ const entries: Entry[] = [
     title: "who_knows: who can fix it / who knows X",
     question: "Who knows the service (or a free-text topic) best?",
     track: "01, 03",
-    feature: "`algo.pageRank` combined with authorship activity; full-text on PR titles for topics",
-    notes: `**Why PageRank is used this way.** \`algo.pageRank(label, relType)\` is directed and takes one label and one type. Authorship edges point Person → PR, so on the authorship graph alone every person gets the same teleport score (we verified: three authors with 1, 1 and 2 PRs all scored 0.333). So we run PageRank over the **whole company graph** (\`null, null\`): a person gains rank only through incoming edges (incidents they RESPONDED_BY, decisions DECIDED_BY them, threads/issues that MENTION them, findings SUPPORTED_BY them). That is a global "the organisation keeps pointing at this person" signal. We then combine it with service-specific activity:
+    feature: "`algo.pageRank` over the derived co-authorship graph, combined with authorship activity; full-text on PR titles for topics",
+    notes: `**Why PageRank is used this way.** \`algo.pageRank(label, relType)\` is directed and takes one label and one type. Authorship edges point Person → PR, so on the authorship graph alone every person gets the same teleport score (we verified: three authors with 1, 1 and 2 PRs all scored 0.333). So the loader derives a **co-authorship graph**, \`(a:Person)-[:COLLABORATES_WITH {files}]->(b:Person)\` in both directions for human authors whose PRs changed the same files, and we run \`algo.pageRank('Person', 'COLLABORATES_WITH')\` on it: a high score marks a hub of the real collaboration network, built from git history only. We then combine it with service-specific activity:
 
 \`\`\`
 activity  = # of the person's PRs that TOUCH the service (or match the topic)

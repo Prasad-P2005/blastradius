@@ -10,7 +10,9 @@
  *      Labels on both endpoints let MATCH use the uid range index.
  *      ON_CALL_FOR is MERGEd on weekStart: one edge per person/service/week.
  *   5. Derive (PR)-[:TOUCHES {files}]->(Service) from PR-MODIFIES->File-PART_OF->Service.
- *   6. Embeddings for EMBEDDED_LABELS from EMBED_TEXT_FIELDS, stored with vecf32().
+ *   6. Derive (Person)-[:COLLABORATES_WITH {files}]->(Person) between human authors
+ *      whose PRs modified the same files (who_knows runs PageRank on it).
+ *   7. Embeddings for EMBEDDED_LABELS from EMBED_TEXT_FIELDS, stored with vecf32().
  *
  * Labels and relationship types are the only interpolated identifiers, and
  * only after assertLabel / assertRelType.
@@ -38,6 +40,7 @@ export interface LoadStats {
   nodes: number;
   edges: number;
   touches: number;
+  collaborations: number;
   embedded: number;
   ms: number;
 }
@@ -108,6 +111,30 @@ SET t.files = files
 RETURN count(t) AS touches`;
 }
 
+/**
+ * Derives the co-authorship graph that who_knows runs PageRank on:
+ * (a)-[:COLLABORATES_WITH {files}]->(b) for every pair of human authors whose
+ * PRs modified at least one common file, in both directions, with `files` =
+ * how many files they share. Real facts only: bots and personas are left out.
+ *
+ * Why derive it: authorship edges point Person → PR, so PageRank can never
+ * flow INTO a person over AUTHORED. Person-to-Person edges let
+ * algo.pageRank('Person', 'COLLABORATES_WITH') rank people by how central
+ * they are in who-works-with-whom.
+ *
+ * Always recomputed for the whole graph (MERGE + SET, so it is idempotent):
+ * a few hundred edges, milliseconds, and a delta can connect any two people.
+ */
+export const COLLABORATION_CYPHER = `// Derive (Person)-[:COLLABORATES_WITH {files}]->(Person): human authors who changed the same files
+MATCH (a:Person)-[:AUTHORED]->(:PR)-[:MODIFIES]->(f:File)<-[:MODIFIES]-(:PR)<-[:AUTHORED]-(b:Person)
+WHERE a <> b
+  AND NOT coalesce(a.isBot, false) AND NOT coalesce(b.isBot, false)
+  AND NOT coalesce(a.persona, false) AND NOT coalesce(b.persona, false)
+WITH a, b, count(DISTINCT f) AS files
+MERGE (a)-[c:COLLABORATES_WITH]->(b)
+SET c.files = files
+RETURN count(c) AS collaborations`;
+
 /** The query that stores embeddings for one embedded label. */
 export function setEmbeddingCypher(label: EmbeddedLabel): string {
   const L = assertLabel(label);
@@ -149,7 +176,7 @@ async function upsertEdges(tenant: Tenant, edges: SnapshotEdge[]): Promise<numbe
   const groups = new Map<string, { type: string; from: NodeLabel; to: NodeLabel; rows: SnapshotEdge[] }>();
   for (const edge of edges) {
     const type = assertRelType(edge.type);
-    if (type === "TOUCHES") continue; // derived, never loaded
+    if (type === "TOUCHES" || type === "COLLABORATES_WITH") continue; // derived, never loaded
     const a = parseUid(edge.from)?.label;
     const b = parseUid(edge.to)?.label;
     if (!a || !b || !isNodeLabel(a) || !isNodeLabel(b)) throw new Error(`bad edge endpoints: ${edge.from} -> ${edge.to}`);
@@ -181,6 +208,11 @@ async function deriveTouches(tenant: Tenant, prUids: string[] | null): Promise<n
     timeoutMs: LOAD_TIMEOUT_MS,
   });
   return Number(rows[0]?.touches ?? 0);
+}
+
+async function deriveCollaboration(tenant: Tenant): Promise<number> {
+  const { rows } = await runCypher(tenant, COLLABORATION_CYPHER, {}, { timeoutMs: LOAD_TIMEOUT_MS });
+  return Number(rows[0]?.collaborations ?? 0);
 }
 
 async function embedNodes(tenant: Tenant, nodes: SnapshotNode[]): Promise<number> {
@@ -223,14 +255,15 @@ export async function loadSnapshot(
   const nodes = await upsertNodes(tenant, snap.nodes);
   const edges = await upsertEdges(tenant, snap.edges);
   const touches = await deriveTouches(tenant, null);
+  const collaborations = await deriveCollaboration(tenant);
   const embedded = opts.embed === false ? 0 : await embedNodes(tenant, snap.nodes);
-  return { nodes, edges, touches, embedded, ms: Math.round(performance.now() - t0) };
+  return { nodes, edges, touches, collaborations, embedded, ms: Math.round(performance.now() - t0) };
 }
 
 /**
  * Incremental re-ingest (Track 03): upserts new nodes/edges without a reset,
  * derives TOUCHES only for PRs in the delta (plus PRs whose MODIFIES edges are
- * in the delta), and embeds only the delta's text nodes.
+ * in the delta), refreshes COLLABORATES_WITH, and embeds only the delta's text nodes.
  */
 export async function ingestDelta(tenant: Tenant, nodes: SnapshotNode[], edges: SnapshotEdge[]): Promise<LoadStats> {
   const t0 = performance.now();
@@ -240,6 +273,7 @@ export async function ingestDelta(tenant: Tenant, nodes: SnapshotNode[], edges: 
   const prUids = new Set<string>(nodes.filter((nd) => nd.label === "PR").map((nd) => nd.uid));
   for (const ed of edges) if (ed.type === "MODIFIES") prUids.add(ed.from);
   const touches = await deriveTouches(tenant, [...prUids]);
+  const collaborations = await deriveCollaboration(tenant);
   const embedded = await embedNodes(tenant, nodes);
-  return { nodes: n, edges: e, touches, embedded, ms: Math.round(performance.now() - t0) };
+  return { nodes: n, edges: e, touches, collaborations, embedded, ms: Math.round(performance.now() - t0) };
 }

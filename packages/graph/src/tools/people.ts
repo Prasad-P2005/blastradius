@@ -1,31 +1,33 @@
 /**
  * tools/people.ts — Track 01/03 "Who can fix it / who knows X?": who_knows
- * (algo.pageRank × authorship activity) and on_call (weekly rotation edges).
+ * (PRs on the service × algo.pageRank over the co-authorship graph) and on_call (weekly rotation edges).
  *
- * ── Why PageRank is combined this way ───────────────────────────────────────
+ * ── Why PageRank runs on a derived co-authorship graph ───────────────────────
  * algo.pageRank(label, relType) is directed and takes ONE label and ONE
- * relationship type. Authorship edges point Person → PR, so on the pure
- * authorship graph rank flows from people INTO PRs and every person ends up
- * with the same teleport score (verified on FalkorDB 6.0.2: three authors with
- * 1, 1 and 2 PRs all scored 0.333). PageRank over authorship alone therefore
- * cannot rank people.
+ * relationship type. Authorship edges point Person → PR, so rank can only flow
+ * from people INTO PRs: on the authorship graph every person ends up with the
+ * same teleport score (verified on FalkorDB 6.0.2: three authors with 1, 1 and
+ * 2 PRs all scored 0.333).
  *
- * Instead we run PageRank over the whole company graph (label and type null).
- * There, a Person only gains rank through INCOMING edges: incidents they
- * RESPONDED_BY, decisions DECIDED_BY them, threads/issues/docs that MENTION
- * them, and findings agents recorded as SUPPORTED_BY them. That is a
- * "recognised authority" signal: the people the organisation keeps pointing at.
- * It is global, so on its own it would rank the same people for every service.
+ * So the loader derives (a:Person)-[:COLLABORATES_WITH {files}]->(b:Person)
+ * between human authors whose PRs changed the same files, in both directions
+ * (see COLLABORATION_CYPHER in load.ts), and we run
+ *   CALL algo.pageRank('Person', 'COLLABORATES_WITH')
+ * A high score means "many people who work on the same code as many others
+ * work with this person": the hub of the real collaboration network. It is
+ * built from git history only, never from synthetic data. (On acme it spans
+ * 25 distinct levels from 0.005 to 0.062.)
  *
- * So the final score combines both signals:
+ * PageRank is global, so on its own it would rank the same people for every
+ * service. The final score combines it with activity on the service:
  *
  *   activity  = number of the person's PRs that TOUCH the service (or match the topic)
  *   authority = 0.5 + 0.5 × pageRank / max(pageRank among the candidates)   ∈ [0.5, 1]
  *   score     = activity × authority × (0.1 if bot else 1)
  *
  * Activity decides who is a candidate and dominates the order (you must have
- * changed the code to fix it); authority breaks ties and lifts people who also
- * responded to incidents or made the decisions, at most doubling a score.
+ * changed the code to fix it); authority breaks ties and lifts the people the
+ * rest of the team works with most, at most doubling a score.
  * Bots are excluded unless includeBots, and then weighted ×0.1 (lesson 3).
  *
  * Personas: who_knows ranks REAL git authors only (persona=false): fictional
@@ -50,8 +52,8 @@ MATCH (s:Service {uid: $service})
 OPTIONAL MATCH (:Person)-[w:ON_CALL_FOR]->(s)
 WHERE w.weekStart <= $today
 WITH s, max(w.weekStart) AS currentWeek
-// authority: PageRank over the whole company graph (see the comment in people.ts)
-CALL algo.pageRank(null, null) YIELD node, score
+// authority: PageRank over the co-authorship graph (see the comment at the top of this file)
+CALL algo.pageRank('Person', 'COLLABORATES_WITH') YIELD node, score
 WITH s, currentWeek, node AS person, score AS authority
 // real git authors only: fictional personas never author code
 WHERE person:Person AND NOT coalesce(person.persona, false)
@@ -66,8 +68,8 @@ WITH collect(hit) AS topicPrs
 OPTIONAL MATCH (:Person)-[w:ON_CALL_FOR]->(:Service)
 WHERE w.weekStart <= $today
 WITH topicPrs, max(w.weekStart) AS currentWeek
-// authority: PageRank over the whole company graph (see the comment in people.ts)
-CALL algo.pageRank(null, null) YIELD node, score
+// authority: PageRank over the co-authorship graph (see the comment at the top of this file)
+CALL algo.pageRank('Person', 'COLLABORATES_WITH') YIELD node, score
 WITH topicPrs, currentWeek, node AS person, score AS authority
 // real git authors only: fictional personas never author code
 WHERE person:Person AND NOT coalesce(person.persona, false)

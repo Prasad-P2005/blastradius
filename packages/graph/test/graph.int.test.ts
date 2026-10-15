@@ -100,6 +100,18 @@ describe("tools", () => {
     expect(col(checkout, "pr")).toEqual(expect.arrayContaining(["PR:142", "PR:140", "PR:125"])); // via cart / currency
   });
 
+  it("COLLABORATES_WITH: derived between human authors who share files; PageRank on it is not flat", async () => {
+    const { rows } = await g.runCypher("acme", `MATCH (a:Person)-[c:COLLABORATES_WITH]->(b:Person)
+      RETURN a.uid AS a, b.uid AS b, c.files AS files, coalesce(a.isBot, false) OR coalesce(a.persona, false) AS fake`, {}, { readOnly: true });
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.fake === false && (r.files as number) >= 1)).toBe(true);
+    // both directions, so PageRank treats collaboration as mutual
+    const pairs = new Set(rows.map((r) => `${r.a}>${r.b}`));
+    expect(rows.every((r) => pairs.has(`${r.b}>${r.a}`))).toBe(true);
+    const pr = await g.runCypher("acme", "CALL algo.pageRank('Person', 'COLLABORATES_WITH') YIELD node, score RETURN score", {}, { readOnly: true });
+    expect(new Set(pr.rows.map((r) => (r.score as number).toFixed(6))).size).toBeGreaterThan(1);
+  });
+
   it("who_knows: pageRank × activity, bots excluded by default", async () => {
     const r = await g.runTool("who_knows", ctx, { service: "checkout" });
     const people = col(r, "person");
