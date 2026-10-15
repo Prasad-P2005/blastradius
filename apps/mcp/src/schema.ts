@@ -75,6 +75,7 @@ export const REL_DIRECTIONS: Record<RelType, { from: string[]; to: string[]; pro
   AUTHORED: { from: ["Person"], to: ["PR"] },
   MODIFIES: { from: ["PR"], to: ["File"], props: ["additions", "deletions"] },
   TOUCHES: { from: ["PR"], to: ["Service"], note: "derived at load time from PR-MODIFIES->File-PART_OF->Service" },
+  COLLABORATES_WITH: { from: ["Person"], to: ["Person"], note: "derived at load time: human authors whose PRs modified the same files; property files = shared file count. who_knows runs PageRank on it" },
   MEMBER_OF: { from: ["Person"], to: ["Team"] },
   ON_CALL_FOR: { from: ["Person"], to: ["Service"], props: ["weekStart", "weekStartTs"], note: "one edge per week" },
   MENTIONS: {
