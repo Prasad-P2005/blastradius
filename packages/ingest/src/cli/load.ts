@@ -24,7 +24,7 @@ try {
       await ensureSchema(tenant);
       return { ...(await loadSnapshot(tenant, snap, { reset, embed })) };
     });
-    console.log(`[load] ${tenant}: ${stats.nodes} nodes, ${stats.edges} edges, ${stats.touches} TOUCHES derived, ${stats.embedded} embedded in ${stats.ms} ms (reset=${reset})`);
+    console.log(`[load] ${tenant}: ${stats.nodes} nodes, ${stats.edges} edges, ${stats.touches} TOUCHES + ${stats.collaborations} COLLABORATES_WITH derived, ${stats.embedded} embedded in ${stats.ms} ms (reset=${reset})`);
   }
   await closeFalkor();
   await closeDb();

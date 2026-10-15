@@ -5,7 +5,7 @@
  *
  * Checks:
  *   - labels / relationship types are in the contract whitelists; no memory
- *     labels, no derived TOUCHES edges, no stored embeddings
+ *     labels, no derived TOUCHES / COLLABORATES_WITH edges, no stored embeddings
  *   - uid = `Label:key`, the label matches, the key matches the node's own
  *     key property (slug / number / path / key); no duplicate uids
  *   - required props per label (SPEC §1), `synthetic` boolean on every node,
@@ -140,7 +140,7 @@ export function validateGraph(nodes: SnapshotNode[], edges: SnapshotEdge[], opts
       err(`edge type ${e.type} not in whitelist`);
       continue;
     }
-    if (e.type === "TOUCHES") err(`TOUCHES ${e.from}→${e.to}: derived at load time, must not be in a snapshot`);
+    if (e.type === "TOUCHES" || e.type === "COLLABORATES_WITH") err(`${e.type} ${e.from}→${e.to}: derived at load time, must not be in a snapshot`);
     const a = byUid.get(e.from);
     const b = byUid.get(e.to);
     if (!a) err(`${e.type}: missing from-node ${e.from}`);

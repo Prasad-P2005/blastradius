@@ -47,7 +47,7 @@ try {
   const before = await newestPrAt(tenant);
   const stats = await withIngestJob(tenant, "delta", async () => ({ ...(await ingestDelta(tenant, delta.nodes, delta.edges)) }));
   const after = await newestPrAt(tenant);
-  console.log(`[add-prs] ${tenant}: ${prs.length} PRs applied (${stats.nodes} nodes, ${stats.edges} edges, ${stats.touches} TOUCHES) in ${stats.ms} ms`);
+  console.log(`[add-prs] ${tenant}: ${prs.length} PRs applied (${stats.nodes} nodes, ${stats.edges} edges, ${stats.touches} TOUCHES, ${stats.collaborations} COLLABORATES_WITH) in ${stats.ms} ms`);
   console.log(`[add-prs] newest PR moved ${new Date(before).toISOString()} → ${new Date(after).toISOString()}`);
   for (const h of humans) console.log(`  + ${h}`);
   await closeFalkor();

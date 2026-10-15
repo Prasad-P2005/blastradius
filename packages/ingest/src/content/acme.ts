@@ -534,7 +534,7 @@ export const ACME_CONTENT: TenantContent = {
       alert: { service: "cart", metric: "cart_grpc_server_errors_ratio", value: "0.06", message: "cart GetCart error ratio 6% over 10m" },
       suspectPr: 3988,
       pastIncident: "INC-2026-040",
-      expert: "florian-bourgey", // who_knows #1 on cart from real authorship (personas carry the fictional edges)
+      expert: "florian-bourgey", // who_knows #1 on cart (5 PRs vs piotr-kielkowicz 4; PageRank does not flip it)
       presenterNote:
         "Recall surfaces INC-2026-040 (cartFailure flag shipped at 10%) and its flagd runbook. Before `add-prs`, the top suspect is #3988. Run `pnpm --filter @blastradius/ingest add-prs --tenant acme` and ask again: #4087 (a new cart-service demo flag in ValkeyCartStore) appears on top. That is incremental re-ingest.",
     },

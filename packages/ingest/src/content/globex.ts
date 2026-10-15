@@ -444,7 +444,7 @@ export const GLOBEX_CONTENT: TenantContent = {
       alert: { service: "product-catalog", metric: "grpc_server_errors_ratio", value: "0.09", message: "productcatalogservice ListProducts errors 9%" },
       suspectPr: 2512,
       pastIncident: "INC-2023-012",
-      expert: "mathieu-benoit", // who_knows #1 on product-catalog from real authorship
+      expert: "olivier-bourgeois", // who_knows #1: ties mathieu-benoit on PRs, wins on co-authorship PageRank
       presenterNote: "#2512 moved productcatalog to a scratch base image 11 days earlier; blast radius covers checkout, frontend and recommendation. ADR-003 explains why.",
     },
     {

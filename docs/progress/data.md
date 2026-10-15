@@ -15,6 +15,10 @@
   to who_knows #1 under real-facts-only ranking: acme-cart-errors → florian-bourgey, globex-catalog-errors → mathieu-benoit.
   data:build deterministic; validate ✓; verify-scenarios 11/11; agents scenarios 43/43.
 
+- COLLABORATES_WITH is derived at load (graph); the validator rejects it in snapshots like TOUCHES. Scenario experts under
+  the new ranking: acme-cart-errors → florian-bourgey, globex-catalog-errors → olivier-bourgeois (ties mathieu-benoit on
+  PRs, wins on PageRank). verify-scenarios 11/11; add-prs beat verified (#3988 → #4087 → reset).
+
 ## In progress
 - nothing
 
