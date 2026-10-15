@@ -109,6 +109,7 @@ export const REL_TYPES = [
   "SUPPORTED_BY", //  (Finding)-[:SUPPORTED_BY]->(any domain node)         the evidence behind a claim
   "HANDED_TO", //     (Finding)-[:HANDED_TO]->(Agent)                      the ONLY way agents hand off work
   "INVESTIGATES", //  (Session)-[:INVESTIGATES]->(Alert|Service|Incident)
+  "COLLABORATES_WITH", // (Person)-[:COLLABORATES_WITH {files}]->(Person)  derived at load: human authors whose PRs modified the same files (both directions)
   "POSTED", //        (Person {persona:true})-[:POSTED]->(Thread|Issue)       a fictional persona wrote this chat thread / filed this ticket
 ] as const;
 export type RelType = (typeof REL_TYPES)[number];
@@ -333,7 +334,7 @@ export const ToolInputSchemas = {
     includeBots: z.boolean().default(false),
     limit: z.number().int().min(1).max(50).default(10),
   }),
-  /** Q3 "Who can fix it?" PageRank over Person-AUTHORED->PR-TOUCHES->Service, bots down-weighted/excluded. */
+  /** Q3 "Who can fix it?" PRs on the service × PageRank over the co-authorship graph (Person-COLLABORATES_WITH->Person); bots down-weighted/excluded. */
   who_knows: z.object({
     service: service.optional(),
     topic: z.string().optional().describe("Free-text topic (resolved via full-text/vector search) when there is no service"),
@@ -429,7 +430,7 @@ export const TOOL_DESCRIPTIONS: Record<ToolName, string> = {
   suspect_changes:
     "Recent merged PRs that touched the service or its dependencies, newest first, with authors and files. 'Recent' is measured from the newest PR in the graph.",
   who_knows:
-    "Rank people who can fix/know a service or topic using PageRank over authorship, filtered by team/on-call; bots excluded by default.",
+    "Rank people who can fix/know a service or topic: their PRs on it × PageRank over the co-authorship graph (people who changed the same files), filtered by team/on-call; bots excluded by default.",
   on_call: "Who is on call for a service this week (falls back to the latest rotation week).",
   service_context: "Owning team, dependencies, dependents, runbooks, docs and recent incidents for one service.",
   past_incidents: "Past incidents on a service (and optionally its neighbours) with the PR that caused them and the runbook that resolved them.",

@@ -6,7 +6,7 @@ When an alert fires ("checkout 5xx at 12%"), a team of agents works over **one F
 
 1. **What else breaks?** A multi-hop `DEPENDS_ON` walk, ranked by betweenness centrality.
 2. **What probably caused it?** Recent PRs on the service or its dependencies, plus similar past incidents found by vector search in FalkorDB.
-3. **Who can fix it?** PageRank over authorship, filtered by team and on-call.
+3. **Who can fix it?** PRs on the service × PageRank over the real co-authorship graph, filtered by team and on-call.
 4. **What worked last time?** Incidents and runbooks recalled from earlier sessions.
 
 Every claim has a **Why?** chip showing the exact Cypher and the graph path behind it. The agents also act: they open a GitHub issue in a sandbox repo, send a webhook ping, and draft a rollback PR in the sandbox repo.
@@ -83,8 +83,10 @@ Checked by the lead in Phase 0. Re-check anything else before building on it.
 - Vector: `CREATE VECTOR INDEX FOR (t:T) ON (t.embedding) OPTIONS {dimension:384, similarityFunction:'cosine'}` works. The `queryNodes` score is a cosine **distance** (identical vectors give ≈0).
 - `GRAPH.RO_QUERY` rejects writes. Use the client's read-only query for read tools.
 - The server default query **TIMEOUT is 1000 ms**. Keep tool queries bounded (`LIMIT`, hop caps). Pass a per-query timeout if one must run longer (e.g. bulk loads).
-- `algo.pageRank` follows edge direction. On `(Person)-[:AUTHORED]->(PR)` every Person gets the **same** score (lead re-verified), because rank only comes from incoming edges. `who_knows` therefore runs PageRank over the whole graph and combines it with activity on the service (see `packages/graph/src/tools/people.ts`).
+- `algo.pageRank` follows edge direction. On `(Person)-[:AUTHORED]->(PR)` every Person gets the **same** score (lead re-verified), because rank only comes from incoming edges. `who_knows` therefore runs `algo.pageRank('Person','COLLABORATES_WITH')` over a co-authorship graph derived at load time (human authors who changed the same files) and combines it with activity on the service (see `packages/graph/src/tools/people.ts`). An earlier whole-graph PageRank went flat once personas took over the fictional edges.
 - Vector search across several labels works in **one** query with `CALL { … UNION ALL … }` subqueries (graph workstream verified this).
+- An aggregating `WITH` (e.g. `MATCH (x:PR) WITH max(x.mergedAt) AS now`) **before** a multi-branch `CALL { … UNION ALL … }` makes the whole subquery return no rows. Compute aggregates inside the branch that needs them (verified 2026-10-15, `personActivity`).
+- `ORDER BY … LIMIT` after a top-level `UNION ALL` sorts only the **last** part. To sort everything, put all branches inside one `CALL {}` and `ORDER BY` after it.
 - Reported by graph but **not** reproduced by the lead in a minimal case: a pattern comprehension naming a relationship variable (`[(s)<-[e:A]-(x) | e.w]`) emptied later comprehensions in the same RETURN in one complex query. If a comprehension comes back unexpectedly empty, suspect this.
 - Embedding model: transformers.js's own download of `model.onnx` failed on this network. The model was fetched with curl into `.cache/hf/Xenova/all-MiniLM-L6-v2/onnx/`. **Never mix `model` and `hash` embeddings in one graph.** Reload with `--reset` if the backend changes.
 

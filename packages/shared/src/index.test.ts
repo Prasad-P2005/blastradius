@@ -50,8 +50,8 @@ describe("tools", () => {
   it("exposes zod shapes for MCP", () => {
     expect(Object.keys(ToolInputSchemas.explain_path.shape)).toEqual(["from", "to", "maxHops"]);
   });
-  it("has 28 relationship types", () => {
-    expect(REL_TYPES.length).toBe(28);
+  it("has 29 relationship types", () => {
+    expect(REL_TYPES.length).toBe(29);
   });
 });
 

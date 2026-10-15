@@ -50,7 +50,7 @@ The relationship types and their directions are listed in `REL_TYPES` in the con
 - `MENTIONS`, `ABOUT`, `SUPPORTED_BY` and the rest have no properties, unless stated otherwise.
 - `POSTED`: (persona)-[:POSTED]->(Thread|Issue). Synthetic prose (thread text, ticket bodies, ADR text, incident summaries) **never quotes or attributes statements to a real person**. It may reference real PRs by number and title ("#1619 [Valkey] Replace Redis with Valkey").
 
-**Derived at load time:** `(pr:PR)-[:TOUCHES]->(s:Service)` for every `PR-MODIFIES->File-PART_OF->Service`. It is derived in Cypher inside `loadSnapshot` and `ingestDelta`, not written by ingest.
+**Derived at load time:** `(pr:PR)-[:TOUCHES]->(s:Service)` for every `PR-MODIFIES->File-PART_OF->Service`, and `(a:Person)-[:COLLABORATES_WITH {files}]->(b:Person)` (both directions) for human, non-persona authors whose PRs modified a common file. Both are derived in Cypher inside `loadSnapshot` and `ingestDelta`, not written by ingest.
 
 ### Indexes (created by `ensureSchema(tenant)`, idempotent)
 
@@ -80,7 +80,7 @@ The relationship types and their directions are listed in `REL_TYPES` in the con
 Rules:
 - `nodes[].label` and `edges[].type` must be in the whitelists. `from` and `to` must reference existing node uids (the validator enforces both).
 - **Embeddings are not stored in the snapshot.** `loadSnapshot` computes them.
-- No `TOUCHES` edges (they are derived). No email addresses anywhere (the validator scans with a regex).
+- No `TOUCHES` or `COLLABORATES_WITH` edges (they are derived). No email addresses anywhere (the validator scans with a regex).
 - The output is deterministic: same source SHAs + seed ⇒ byte-identical file. Sort nodes and edges.
 
 `data/scenarios.json` is `Scenario[]`, covering both tenants and at least 3 per tenant. At least one per tenant must use `mode: "ask"`.
@@ -172,7 +172,7 @@ Inputs are listed in `ToolInputSchemas`. Every row is plain JSON. Node reference
 | `blast_radius` | variable-length `DEPENDS_ON*1..maxHops` + `algo.betweenness` | `service, name, hops, betweenness, tier, team` sorted by betweenness desc, then hops | one `DEPENDS_ON` path per affected service |
 | `critical_services` | `algo.betweenness` on Service/DEPENDS_ON | `service, name, betweenness, dependents, dependencies` | — |
 | `suspect_changes` | time window from `newestPrAt`, `TOUCHES` + `DEPENDS_ON*0..maxHops` | `pr, number, title, mergedAt, author, isBot, service, hops, files, additions, deletions, url` newest first, humans first unless includeBots | `Person-AUTHORED->PR-TOUCHES->Service(<-DEPENDS_ON-…alert service)` |
-| `who_knows` | real authors only (`persona=false`); `algo.pageRank` over Person/PR authorship. Score = pageRank × activity on the service; bots excluded unless `includeBots` (then ×0.1) | `person, name, score, prs, team, onCall, lastActiveAt` | `Person-AUTHORED->PR-TOUCHES->Service` (best PR) |
+| `who_knows` | real authors only (`persona=false`); `algo.pageRank('Person','COLLABORATES_WITH')` over the derived co-authorship graph. Score = PRs on the service × authority (0.5 + 0.5 × pageRank / max); bots excluded unless `includeBots` (then ×0.1) | `person, name, score, prs, team, onCall, lastActiveAt` | `Person-AUTHORED->PR-TOUCHES->Service` (best PR) |
 | `on_call` | `ON_CALL_FOR {weekStart}` ≤ `at`, latest; on-call people are **personas** (role SRE etc.) | `person, name, weekStart, team, service` | `Person-ON_CALL_FOR->Service` |
 | `service_context` | 1-hop expansion | one row: `service, team, owners[], dependsOn[], dependents[], runbooks[], docs[], recentIncidents[], decisions[]` | the 1-hop edges |
 | `past_incidents` | `AFFECTED` (+ `DEPENDS_ON` neighbours) → `CAUSED_BY`, `RESOLVED_BY` | `incident, title, severity, startedAt, service, causedBy, runbook, runbookSteps[], responders[], synthetic, sessionId` | `Incident-AFFECTED->Service`, `Incident-CAUSED_BY->PR`, `Incident-RESOLVED_BY->Runbook` |
