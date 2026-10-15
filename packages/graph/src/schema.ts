@@ -15,7 +15,7 @@ import { runCypher } from "./connection.ts";
 export const RANGE_INDEXES: Partial<Record<NodeLabel, string[]>> = {
   Service: ["slug"],
   PR: ["number", "mergedAt"],
-  Person: ["slug", "isBot"],
+  Person: ["slug", "isBot", "persona"],
   Incident: ["key"],
   Decision: ["key"],
   Issue: ["key"],

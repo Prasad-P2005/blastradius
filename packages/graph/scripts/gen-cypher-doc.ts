@@ -19,6 +19,7 @@ const { schemaStatements } = await import("../src/schema.ts");
 const load = await import("../src/load.ts");
 const mem = await import("../src/memory.ts");
 const reads = await import("../src/reads.ts");
+const people = await import("../src/people.ts");
 const { NEWEST_PR_CYPHER } = await import("../src/tools/changes.ts");
 
 const out: string[] = [];
@@ -218,6 +219,7 @@ w("## Contents");
 w();
 for (const e of entries) w(`- [${e.title}](#${e.tool.replace(/_/g, "_")})`);
 w("- [Memory (Track 02)](#memory-track-02)");
+w("- [People and personas](#people-and-personas)");
 w("- [UI reads](#ui-reads)");
 w("- [Schema and indexes](#schema-and-indexes)");
 w("- [Loading](#loading)");
@@ -337,6 +339,26 @@ code("cypher", mem.GET_FINDINGS_CYPHER);
 code("cypher", mem.LIST_SESSIONS_CYPHER);
 const sessions = await g.listGraphSessions("acme");
 w(`Output of listGraphSessions: \`${JSON.stringify(sessions)}\``);
+w();
+
+// ── People ──────────────────────────────────────────────────────────────────
+w("## People and personas");
+w();
+w("Real git authors (`persona:false`) carry only real facts: AUTHORED PRs and derived team membership. Fictional personas (`persona:true`, with a `role`) carry every invented act: POSTED threads and tickets, ON_CALL_FOR weeks, RESPONDED_BY incidents, DECIDED_BY decisions. Findings that agents record ABOUT or SUPPORTED_BY a person join that person's feed, which is how the /people page shows agents talking about someone live.");
+w();
+const ppl = await g.listPeople("acme");
+w("### listPeople");
+w();
+code("cypher", people.LIST_PEOPLE_CYPHER);
+w(`Output (first 2 of ${ppl.length}): \`${JSON.stringify(ppl.slice(0, 2))}\``);
+w();
+const feed = await g.personActivity("acme", "Person:persona-sam-rivera", { limit: 6 });
+w("### personActivity: the activity feed");
+w();
+w("One `CALL {}` with a `UNION ALL` branch per kind of activity, then one `ORDER BY` over all of it. Two FalkorDB 6.0.2 details shaped it: an aggregating `WITH` before a multi-branch `CALL {}` empties the subquery (so `now` is computed inside the on-call branch), and an `ORDER BY` after a top-level `UNION` would sort only the last part.");
+w();
+code("cypher", people.PERSON_ACTIVITY_CYPHER);
+w(`Output for \`Person:persona-sam-rivera\`: \`${JSON.stringify(trim(feed.items as unknown as Json))}\``);
 w();
 
 // ── UI reads ────────────────────────────────────────────────────────────────

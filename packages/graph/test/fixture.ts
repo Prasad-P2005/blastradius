@@ -77,8 +77,20 @@ const people: [string, string, boolean, string | null][] = [
   ["renovate-bot", "renovate[bot]", true, null],
 ];
 for (const [slug, name, isBot, team] of people) {
-  n("Person", slug, { name, slug, isBot, prCount: 0, firstSeenAt: ago(400), lastSeenAt: ago(1), synthetic: false });
+  n("Person", slug, { name, slug, isBot, prCount: 0, firstSeenAt: ago(400), lastSeenAt: ago(1), persona: false, synthetic: false });
   if (team) e("MEMBER_OF", `Person:${slug}`, `Team:${team}`);
+}
+// Fictional personas: they carry everything invented that involves a person
+// (chat, tickets, ADR sign-off, on-call, incident response). Real authors only AUTHOR PRs.
+const personas: [string, string, string, string][] = [
+  ["persona-sam-rivera", "Sam Rivera", "SRE", "cart-team"],
+  ["persona-jo-okafor", "Jo Okafor", "SRE", "checkout-team"],
+  ["persona-priya-nair", "Priya Nair", "Engineering manager", "cart-team"],
+  ["persona-max-holt", "Max Holt", "Support lead", "web-team"],
+];
+for (const [slug, name, role, team] of personas) {
+  n("Person", slug, { name, slug, role, isBot: false, persona: true, synthetic: true });
+  e("MEMBER_OF", `Person:${slug}`, `Team:${team}`);
 }
 
 // ── Files ───────────────────────────────────────────────────────────────────
@@ -131,11 +143,11 @@ for (const [num, title, author, daysAgo, touched] of prs) {
 
 // ── On-call: one edge PER WEEK (lesson 1) ───────────────────────────────────
 const oncall: [string, string, string][] = [
-  ["alice-chen", "cart", "2025-09-22"],
-  ["erin-wu", "cart", "2025-09-29"],
-  ["carol-diaz", "checkout", "2025-09-22"],
-  ["bob-patel", "checkout", "2025-09-29"],
-  ["alice-chen", "valkey-cart", "2025-09-29"],
+  ["persona-jo-okafor", "cart", "2025-09-22"],
+  ["persona-sam-rivera", "cart", "2025-09-29"],
+  ["persona-sam-rivera", "checkout", "2025-09-22"],
+  ["persona-jo-okafor", "checkout", "2025-09-29"],
+  ["persona-sam-rivera", "valkey-cart", "2025-09-29"],
 ];
 for (const [p, s, w] of oncall) e("ON_CALL_FOR", `Person:${p}`, `Service:${s}`, { weekStart: w, weekStartTs: Date.parse(`${w}T00:00:00Z`) });
 
@@ -163,7 +175,7 @@ n("Doc", "howto-cart-debugging", {
   synthetic: true,
 });
 e("DOCUMENTED_IN", "Decision:ADR-003", "Doc:adr-003-valkey");
-e("DECIDED_BY", "Decision:ADR-003", "Person:alice-chen");
+e("DECIDED_BY", "Decision:ADR-003", "Person:persona-priya-nair");
 e("DECIDED_BY", "Decision:ADR-003", "Team:cart-team");
 e("JUSTIFIES", "Decision:ADR-003", "PR:101");
 e("ABOUT", "Decision:ADR-003", "Service:cart");
@@ -217,8 +229,8 @@ e("AFFECTED", "Incident:INC-2025-007", "Service:cart");
 e("AFFECTED", "Incident:INC-2025-007", "Service:valkey-cart");
 e("CAUSED_BY", "Incident:INC-2025-007", "PR:101");
 e("RESOLVED_BY", "Incident:INC-2025-007", "Runbook:valkey-connection-exhaustion");
-e("RESPONDED_BY", "Incident:INC-2025-007", "Person:alice-chen");
-e("RESPONDED_BY", "Incident:INC-2025-007", "Person:erin-wu");
+e("RESPONDED_BY", "Incident:INC-2025-007", "Person:persona-sam-rivera");
+e("RESPONDED_BY", "Incident:INC-2025-007", "Person:persona-priya-nair");
 e("TRIGGERED_BY", "Incident:INC-2025-007", "Alert:alert-0001");
 e("FIRED_ON", "Alert:alert-0001", "Service:cart");
 e("MENTIONS", "Incident:INC-2025-007", "Decision:ADR-003");
@@ -227,21 +239,21 @@ e("AFFECTED", "Incident:INC-2025-019", "Service:checkout");
 e("AFFECTED", "Incident:INC-2025-019", "Service:payment");
 e("CAUSED_BY", "Incident:INC-2025-019", "PR:120");
 e("RESOLVED_BY", "Incident:INC-2025-019", "Runbook:payment-timeout-rollback");
-e("RESPONDED_BY", "Incident:INC-2025-019", "Person:bob-patel");
-e("RESPONDED_BY", "Incident:INC-2025-019", "Person:carol-diaz");
+e("RESPONDED_BY", "Incident:INC-2025-019", "Person:persona-jo-okafor");
 e("APPLIES_TO", "Runbook:payment-timeout-rollback", "Service:payment");
 
 // ── Company brain: a chat thread and a ticket ───────────────────────────────
 n("Thread", "t-0001", {
   channel: "#cart-team",
   title: "Valkey pool exhaustion again?",
-  text: "Alice Chen: I lowered the Valkey pool size in PR 140 to save memory.\nErin Wu: careful, that's what caused INC-2025-007.",
+  text: "Sam Rivera: PR 140 lowered the Valkey pool size to save memory.\nPriya Nair: careful, that's what caused INC-2025-007.",
   createdAt: ago(4),
   synthetic: true,
 });
 e("ABOUT", "Thread:t-0001", "Service:cart");
 e("MENTIONS", "Thread:t-0001", "PR:140");
-e("MENTIONS", "Thread:t-0001", "Person:alice-chen");
+e("MENTIONS", "Thread:t-0001", "Person:persona-priya-nair");
+e("POSTED", "Person:persona-sam-rivera", "Thread:t-0001");
 e("MENTIONS", "Thread:t-0001", "Incident:INC-2025-007");
 n("Issue", "ACME-142", {
   key: "ACME-142",
@@ -254,10 +266,11 @@ n("Issue", "ACME-142", {
 });
 e("ABOUT", "Issue:ACME-142", "Service:cart");
 e("MENTIONS", "Issue:ACME-142", "Service:checkout");
+e("POSTED", "Person:persona-max-holt", "Issue:ACME-142");
 
 // prCount per person
 for (const node of nodes) {
-  if (node.label === "Person") node.props.prCount = prs.filter((p) => `Person:${p[2]}` === node.uid).length;
+  if (node.label === "Person" && node.props.persona === false) node.props.prCount = prs.filter((p) => `Person:${p[2]}` === node.uid).length;
 }
 
 export const fixtureSnapshot: Snapshot = {

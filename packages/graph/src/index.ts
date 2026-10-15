@@ -31,6 +31,9 @@ export {
   listGraphSessions,
 } from "./memory.ts";
 
+// people (personas + real authors)
+export { listPeople, personActivity } from "./people.ts";
+
 // UI reads (all ids are uids)
 export { overview, neighborhood, counts, memoryInspector } from "./reads.ts";
 

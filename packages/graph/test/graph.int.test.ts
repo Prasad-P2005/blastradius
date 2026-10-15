@@ -115,13 +115,18 @@ describe("tools", () => {
     expect(topic.rows[0]!.person).toBe("Person:alice-chen");
     const team = await g.runTool("who_knows", ctx, { service: "checkout", team: "web-team" });
     expect(team.rows).toHaveLength(0);
+    // personas never rank (they author nothing and are filtered); on-call teammates are surfaced
+    expect(people.some((p) => String(p).includes("persona-"))).toBe(false);
+    expect(r.rows.every((x) => x.onCallTeammate === "Person:persona-jo-okafor")).toBe(true);
+    const cart = await g.runTool("who_knows", ctx, { service: "cart", onCallOnly: true });
+    expect(cart.rows[0]).toMatchObject({ person: "Person:alice-chen", onCall: false, onCallTeammate: "Person:persona-sam-rivera" });
   });
 
-  it("on_call: latest week <= at, one edge per week", async () => {
+  it("on_call: latest week <= at, one edge per week, personas with role", async () => {
     const now = await g.runTool("on_call", ctx, { service: "cart" });
-    expect(now.rows[0]!.person).toBe("Person:erin-wu");
+    expect(now.rows[0]).toMatchObject({ person: "Person:persona-sam-rivera", role: "SRE", persona: true });
     const past = await g.runTool("on_call", ctx, { service: "cart", at: "2025-09-24" });
-    expect(past.rows[0]!.person).toBe("Person:alice-chen");
+    expect(past.rows[0]!.person).toBe("Person:persona-jo-okafor");
     expect(past.paths[0]!.edges[0]!.id).toContain("#2025-09-22");
   });
 
@@ -237,6 +242,20 @@ describe("memory flow", () => {
     expect(finding.cypher[0]).toBe(blast.cypher);
   });
 
+  it("a finding about a persona shows up in that persona's activity feed", async () => {
+    await g.recordEpisode("acme", { sessionId: s1, agent: "expert", kind: "agent_run", summary: "expert started" });
+    const oc = await g.runTool("on_call", ctx, { service: "cart" });
+    const { finding } = await g.recordFinding(
+      { tenant: "acme", sessionId: s1, agent: "expert" },
+      { kind: "expert", claim: "Sam Rivera is on call for cart this week", confidence: 0.8, about: ["Person:persona-sam-rivera"], evidence: ["Service:cart"], cypher: [oc.cypher] },
+    );
+    const a = await g.personActivity("acme", "Person:persona-sam-rivera");
+    const item = a.items.find((i) => i.kind === "finding");
+    expect(item).toMatchObject({ uid: finding.uid, sessionId: s1, title: "Sam Rivera is on call for cart this week" });
+    expect(a.items[0]!.uid).toBe(finding.uid); // newest first
+    expect(a.person.counts.findings).toBe(1);
+  });
+
   it("read_handoffs: the investigator sees it; the expert does not", async () => {
     const r = await g.runTool("read_handoffs", { tenant: "acme", sessionId: s1, agent: "investigator" }, {});
     expect(col(r, "finding")).toEqual([findingId]);
@@ -250,9 +269,9 @@ describe("memory flow", () => {
 
   it("memory inspector shows the session's episodes, finding, handoff and subgraph", async () => {
     const m = await g.memoryInspector("acme", s1);
-    expect(m.sessions.find((s) => s.sessionId === s1)?.episodes).toBe(5);
-    expect(m.session!.episodes).toHaveLength(5);
-    expect(m.session!.episodes[4]!.findings[0]!.id).toBe(findingId); // PRODUCED by the latest episode
+    expect(m.sessions.find((s) => s.sessionId === s1)?.episodes).toBe(6);
+    expect(m.session!.episodes).toHaveLength(6);
+    expect(m.session!.episodes[4]!.findings[0]!.id).toBe(findingId); // PRODUCED by the then-latest episode
     expect(m.session!.handoffs[0]).toMatchObject({ findingId, from: "triage", to: "investigator" });
     const types = new Set(m.subgraph.edges.map((e) => e.type));
     for (const t of ["HAS_EPISODE", "NEXT", "PRODUCED", "ABOUT", "SUPPORTED_BY", "HANDED_TO", "WROTE"]) expect(types).toContain(t);
@@ -268,7 +287,7 @@ describe("memory flow", () => {
       severity: "SEV2",
       service: "cart",
       causedByPr: "PR:140",
-      responders: ["Person:alice-chen"],
+      responders: ["Person:persona-sam-rivera"],
       runbook: { title: "Restore Valkey pool size", steps: ["Revert PR 140", "Restart cart pods"] },
       findingIds: [findingId],
     });
@@ -297,6 +316,44 @@ describe("memory flow", () => {
 
     const sim = await g.runTool("similar_incidents", ctx2, { text: "Valkey connection pool too small, cart 5xx", service: "cart" });
     expect(col(sim, "incident")).toContain(res.incidentUid);
+  });
+});
+
+describe("people", () => {
+  it("listPeople: personas first with role, team, counts and on-call-now", async () => {
+    const all = await g.listPeople("acme");
+    expect(all.slice(0, 4).every((p) => p.persona)).toBe(true);
+    const sam = all.find((p) => p.uid === "Person:persona-sam-rivera")!;
+    expect(sam).toMatchObject({ role: "SRE", team: "Team:cart-team", isBot: false });
+    expect(sam.onCallNow.sort()).toEqual(["Service:cart", "Service:valkey-cart"]);
+    expect(sam.counts).toMatchObject({ posts: 1, onCallWeeks: 3, prs: 0 });
+    // 1 seeded incident, plus the one the "closeIncident" memory test wrote earlier in this file
+    expect(sam.counts.incidents).toBeGreaterThanOrEqual(1);
+    const real = await g.listPeople("acme", { persona: false });
+    expect(real.every((p) => !p.persona)).toBe(true);
+    expect(real.find((p) => p.uid === "Person:alice-chen")?.counts.prs).toBeGreaterThanOrEqual(3);
+    expect((await g.listPeople("acme", { persona: true })).map((p) => p.uid).sort()).toEqual(
+      ["Person:persona-jo-okafor", "Person:persona-max-holt", "Person:persona-priya-nair", "Person:persona-sam-rivera"],
+    );
+  });
+
+  it("personActivity: posts, incidents, decisions, on-call weeks for personas; PRs for authors", async () => {
+    const sam = await g.personActivity("acme", "Person:persona-sam-rivera");
+    const kinds = new Set(sam.items.map((i) => i.kind));
+    for (const k of ["thread", "incident", "on_call"]) expect(kinds).toContain(k);
+    const ats = sam.items.map((i) => i.at);
+    expect([...ats].sort((a, b) => b - a)).toEqual(ats);
+    const week = sam.items.find((i) => i.kind === "on_call" && i.title.includes("2025-09-29"))!;
+    expect(week.detail).toMatch(/cart/); // collapsed: one item per week, services joined
+    expect(sam.items.filter((i) => i.kind === "on_call")).toHaveLength(2);
+    const priya = await g.personActivity("acme", "Person:persona-priya-nair");
+    expect(priya.items.find((i) => i.kind === "decision")?.uid).toBe("Decision:ADR-003");
+    const max = await g.personActivity("acme", "Person:persona-max-holt");
+    expect(max.items[0]).toMatchObject({ kind: "issue", uid: "Issue:ACME-142" });
+    const alice = await g.personActivity("acme", "Person:alice-chen", { limit: 2 });
+    expect(alice.items).toHaveLength(2);
+    expect(alice.items[0]).toMatchObject({ kind: "pr", uid: "PR:140" });
+    expect(alice.cypher).toHaveLength(2);
   });
 });
 

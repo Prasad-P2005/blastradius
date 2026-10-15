@@ -27,6 +27,12 @@
  * changed the code to fix it); authority breaks ties and lifts people who also
  * responded to incidents or made the decisions, at most doubling a score.
  * Bots are excluded unless includeBots, and then weighted ×0.1 (lesson 3).
+ *
+ * Personas: who_knows ranks REAL git authors only (persona=false): fictional
+ * personas never author code. On-call rotations are staffed by personas, so
+ * besides `onCall` (the person themself is on call) each row carries
+ * `onCallTeammate`: a persona on the same team who is on call for the service
+ * this week. `onCallOnly` keeps rows where either is set.
  */
 import { serviceUid, slugify, uid } from "@blastradius/shared";
 import { defineTool, fulltextQuery, makeResult, num, round, str, toolQuery } from "./common.ts";
@@ -47,7 +53,9 @@ WITH s, max(w.weekStart) AS currentWeek
 // authority: PageRank over the whole company graph (see the comment in people.ts)
 CALL algo.pageRank(null, null) YIELD node, score
 WITH s, currentWeek, node AS person, score AS authority
-WHERE person:Person AND ($includeBots OR NOT coalesce(person.isBot, false))
+// real git authors only: fictional personas never author code
+WHERE person:Person AND NOT coalesce(person.persona, false)
+  AND ($includeBots OR NOT coalesce(person.isBot, false))
 // activity: the person's PRs that touch the service
 MATCH p = (person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(s)`
       : `// Q3 "Who knows about $topic?"
@@ -61,7 +69,9 @@ WITH topicPrs, max(w.weekStart) AS currentWeek
 // authority: PageRank over the whole company graph (see the comment in people.ts)
 CALL algo.pageRank(null, null) YIELD node, score
 WITH topicPrs, currentWeek, node AS person, score AS authority
-WHERE person:Person AND ($includeBots OR NOT coalesce(person.isBot, false))
+// real git authors only: fictional personas never author code
+WHERE person:Person AND NOT coalesce(person.persona, false)
+  AND ($includeBots OR NOT coalesce(person.isBot, false))
 // activity: the person's PRs on the topic
 MATCH p = (person)-[:AUTHORED]->(pr:PR)-[:TOUCHES]->(:Service)
 WHERE pr IN topicPrs`;
@@ -81,11 +91,15 @@ WHERE $team IS NULL OR any(t IN teams WHERE t.uid = $team OR t.slug = $team)
 // on call = has the current week's ON_CALL_FOR edge (for $service, or any service for a topic)
 OPTIONAL MATCH (person)-[oc:ON_CALL_FOR {weekStart: currentWeek}]->(ocs:Service)
 WHERE $service IS NULL OR ocs.uid = $service
-WITH person, prs, lastActiveAt, path, pagerank, authority, teams, count(oc) > 0 AS onCall
-WHERE NOT $onCallOnly OR onCall
+WITH currentWeek, person, prs, lastActiveAt, path, pagerank, authority, teams, count(oc) > 0 AS onCall
+// on-call rotations are staffed by personas: who on the person's team is on call right now?
+OPTIONAL MATCH (mate:Person)-[:MEMBER_OF]->(mt:Team), (mate)-[:ON_CALL_FOR {weekStart: currentWeek}]->(ms:Service)
+WHERE mt IN teams AND mate <> person AND ($service IS NULL OR ms.uid = $service)
+WITH person, prs, lastActiveAt, path, pagerank, authority, teams, onCall, collect(DISTINCT mate.uid)[0] AS onCallTeammate
+WHERE NOT $onCallOnly OR onCall OR onCallTeammate IS NOT NULL
 RETURN person.uid AS person, person.name AS name,
        prs * authority * (CASE WHEN coalesce(person.isBot, false) THEN 0.1 ELSE 1.0 END) AS score,
-       prs, pagerank, authority, [t IN teams | t.name][0] AS team, onCall, lastActiveAt,
+       prs, pagerank, authority, [t IN teams | t.name][0] AS team, onCall, onCallTeammate, lastActiveAt,
        coalesce(person.isBot, false) AS isBot, path
 ORDER BY score DESC, lastActiveAt DESC
 LIMIT $limit`;
@@ -121,7 +135,8 @@ export const whoKnows = defineTool("who_knows", async (ctx, args) => {
   return makeResult("who_knows", ctx, cypher, params, out, summary);
 });
 
-export const ON_CALL_CYPHER = `// Who is on call for $service at $at? One ON_CALL_FOR edge per week:
+export const ON_CALL_CYPHER = `// Who is on call for $service at $at? (on-call people are personas, e.g. role SRE)
+// One ON_CALL_FOR edge per week:
 // take the newest rotation week that started on or before $at.
 MATCH (s:Service {uid: $service})
 MATCH (:Person)-[w:ON_CALL_FOR]->(s)
@@ -129,7 +144,8 @@ WHERE w.weekStart <= $at
 WITH s, max(w.weekStart) AS week
 MATCH p = (person:Person)-[oc:ON_CALL_FOR {weekStart: week}]->(s)
 OPTIONAL MATCH (person)-[:MEMBER_OF]->(team:Team)
-RETURN person.uid AS person, person.name AS name, oc.weekStart AS weekStart,
+RETURN person.uid AS person, person.name AS name, person.role AS role,
+       coalesce(person.persona, false) AS persona, oc.weekStart AS weekStart,
        team.name AS team, s.uid AS service, p AS path
 ORDER BY name`;
 

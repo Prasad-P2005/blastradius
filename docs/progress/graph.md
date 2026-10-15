@@ -16,10 +16,17 @@
   fixture). `scripts/scale-check.ts`: 11k nodes / 26k edges synthetic graph, all tools < 65 ms.
 - Requests filed in docs/requests/graph.md.
 
+- M5 (2026-10-15): personas. `listPeople` / `personActivity` (src/people.ts) for the /people page; who_knows ranks real
+  authors only (persona=false) and reports `onCallTeammate`; on_call returns `role`/`persona`; `Person.persona` range index.
+  FalkorDB 6.0.2 quirks found and documented in CYPHER.md: an aggregating WITH before a multi-branch CALL {} empties the
+  subquery; ORDER BY after a top-level UNION sorts only the last part. 27/27 integration tests pass.
+
 ## In progress
 - nothing
 
 ## Next
+- who_knows authority is now flat (every real author has the same PageRank, authority = 1.0): real people lost the
+  fictional incoming edges that used to give them rank. Needs a real-facts signal; see report to lead.
 - Run tools against the data agent's real snapshot when it lands; check timings vs the 1000 ms default.
 
 ## Blockers
