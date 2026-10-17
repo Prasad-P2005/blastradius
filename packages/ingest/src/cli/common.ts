@@ -3,7 +3,7 @@
  * Every entrypoint calls loadRootEnv() before anything else (CLAUDE.md lesson 7).
  */
 import { join } from "node:path";
-import { TENANTS, isTenant, type Tenant } from "@blastradius/shared";
+import { TENANTS, isSeedPack as isTenant, type SeedPack as Tenant } from "@blastradius/shared";
 import { findRepoRoot } from "@blastradius/shared/env";
 
 export const ROOT = findRepoRoot();

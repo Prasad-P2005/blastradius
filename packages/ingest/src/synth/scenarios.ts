@@ -10,7 +10,7 @@
  *   - expert defaults to the top human author on the alert service.
  * The authoritative check runs the real tools: `verify-scenarios`.
  */
-import { uid, type Scenario, type Tenant } from "@blastradius/shared";
+import { uid, type Scenario, type SeedPack as Tenant } from "@blastradius/shared";
 import type { GraphBuilder } from "../graph-builder.ts";
 import type { RealIndex } from "./context.ts";
 import type { IncidentFacts } from "./incidents.ts";

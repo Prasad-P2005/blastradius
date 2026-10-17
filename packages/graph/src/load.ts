@@ -153,7 +153,7 @@ export function embedText(label: EmbeddedLabel, props: Record<string, Json>): st
     .join("\n");
 }
 
-async function upsertNodes(tenant: Tenant, nodes: SnapshotNode[]): Promise<number> {
+export async function upsertNodes(tenant: Tenant, nodes: SnapshotNode[]): Promise<number> {
   const byLabel = new Map<NodeLabel, SnapshotNode[]>();
   for (const node of nodes) {
     const label = assertLabel(node.label);
@@ -172,7 +172,7 @@ async function upsertNodes(tenant: Tenant, nodes: SnapshotNode[]): Promise<numbe
   return count;
 }
 
-async function upsertEdges(tenant: Tenant, edges: SnapshotEdge[]): Promise<number> {
+export async function upsertEdges(tenant: Tenant, edges: SnapshotEdge[]): Promise<number> {
   const groups = new Map<string, { type: string; from: NodeLabel; to: NodeLabel; rows: SnapshotEdge[] }>();
   for (const edge of edges) {
     const type = assertRelType(edge.type);
@@ -202,7 +202,7 @@ async function upsertEdges(tenant: Tenant, edges: SnapshotEdge[]): Promise<numbe
   return count;
 }
 
-async function deriveTouches(tenant: Tenant, prUids: string[] | null): Promise<number> {
+export async function deriveTouches(tenant: Tenant, prUids: string[] | null): Promise<number> {
   if (prUids && prUids.length === 0) return 0;
   const { rows } = await runCypher(tenant, touchesCypher(prUids !== null), prUids ? { prs: prUids } : {}, {
     timeoutMs: LOAD_TIMEOUT_MS,
@@ -210,12 +210,12 @@ async function deriveTouches(tenant: Tenant, prUids: string[] | null): Promise<n
   return Number(rows[0]?.touches ?? 0);
 }
 
-async function deriveCollaboration(tenant: Tenant): Promise<number> {
+export async function deriveCollaboration(tenant: Tenant): Promise<number> {
   const { rows } = await runCypher(tenant, COLLABORATION_CYPHER, {}, { timeoutMs: LOAD_TIMEOUT_MS });
   return Number(rows[0]?.collaborations ?? 0);
 }
 
-async function embedNodes(tenant: Tenant, nodes: SnapshotNode[]): Promise<number> {
+export async function embedNodes(tenant: Tenant, nodes: SnapshotNode[]): Promise<number> {
   let count = 0;
   for (const label of EMBEDDED_LABELS) {
     const group = nodes.filter((nd) => nd.label === label);

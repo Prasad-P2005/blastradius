@@ -3,7 +3,7 @@
  * generators can ground everything they write in real PRs, people and
  * services ("who touches what", "which PRs are recent", "who depends on X").
  */
-import { uid, type SnapshotNode, type Tenant } from "@blastradius/shared";
+import { uid, type SnapshotNode, type SeedPack as Tenant } from "@blastradius/shared";
 import type { RealSnapshot } from "../snapshot.ts";
 import { DAY } from "../time.ts";
 

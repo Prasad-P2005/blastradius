@@ -15,6 +15,7 @@
     "seed": "pnpm db:migrate && pnpm graph:load",
     "smoke": "pnpm --filter @blastradius/agents smoke",
     "concurrency": "pnpm --filter @blastradius/agents concurrency",
+    "seed:memory": "pnpm --filter @blastradius/agents seed:memory",
     "mcp": "pnpm --filter @blastradius/mcp start"
   },
   "devDependencies": {

@@ -1,0 +1,159 @@
+{
+  "about": "Nimbus Coffee: a small fictional online coffee shop for the /build tutorial. Every step of the builder can seed its part. All people and events are invented. Times are relative: \"-3d\" = 3 days before seeding; weekStart \"thisWeek\"/\"lastWeek\" = that week's Monday.",
+  "steps": {
+    "services": {
+      "nodes": [
+        { "label": "Service", "values": { "name": "web", "tier": "1", "language": "typescript", "description": "Storefront the customers use" } },
+        { "label": "Service", "values": { "name": "api-gateway", "tier": "1", "language": "go", "description": "Routes every web request to the backend" } },
+        { "label": "Service", "values": { "name": "orders", "tier": "1", "language": "go", "description": "Places and tracks orders; calls payments and inventory" } },
+        { "label": "Service", "values": { "name": "payments", "tier": "1", "language": "go", "description": "Charges cards through the payment provider" } },
+        { "label": "Service", "values": { "name": "inventory", "tier": "2", "language": "python", "description": "Stock levels per coffee and size" } },
+        { "label": "Service", "values": { "name": "notifications", "tier": "3", "language": "python", "description": "Order confirmation emails" } },
+        { "label": "Service", "values": { "name": "orders-db", "tier": "1", "language": "postgres", "description": "Postgres database for orders and payments" } }
+      ],
+      "edges": []
+    },
+    "dependencies": {
+      "nodes": [],
+      "edges": [
+        { "type": "DEPENDS_ON", "from": "Service:web", "to": "Service:api-gateway", "props": { "protocol": "http" } },
+        { "type": "DEPENDS_ON", "from": "Service:api-gateway", "to": "Service:orders", "props": { "protocol": "grpc" } },
+        { "type": "DEPENDS_ON", "from": "Service:api-gateway", "to": "Service:inventory", "props": { "protocol": "grpc" } },
+        { "type": "DEPENDS_ON", "from": "Service:orders", "to": "Service:payments", "props": { "protocol": "grpc" } },
+        { "type": "DEPENDS_ON", "from": "Service:orders", "to": "Service:inventory", "props": { "protocol": "grpc" } },
+        { "type": "DEPENDS_ON", "from": "Service:orders", "to": "Service:notifications", "props": { "protocol": "kafka" } },
+        { "type": "DEPENDS_ON", "from": "Service:orders", "to": "Service:orders-db", "props": { "protocol": "postgres" } },
+        { "type": "DEPENDS_ON", "from": "Service:payments", "to": "Service:orders-db", "props": { "protocol": "postgres" } }
+      ]
+    },
+    "people": {
+      "nodes": [
+        { "label": "Team", "values": { "name": "Storefront", "slack": "#team-storefront" } },
+        { "label": "Team", "values": { "name": "Commerce", "slack": "#team-commerce" } },
+        { "label": "Team", "values": { "name": "Platform", "slack": "#team-platform" } },
+        { "label": "Person", "values": { "name": "Ada Park", "role": "SRE" } },
+        { "label": "Person", "values": { "name": "Ben Ortiz", "role": "Backend engineer" } },
+        { "label": "Person", "values": { "name": "Chloe Wu", "role": "Backend engineer" } },
+        { "label": "Person", "values": { "name": "Dev Patel", "role": "Frontend engineer" } },
+        { "label": "Person", "values": { "name": "Elif Kaya", "role": "Platform engineer" } }
+      ],
+      "edges": [
+        { "type": "OWNS", "from": "Team:storefront", "to": "Service:web" },
+        { "type": "OWNS", "from": "Team:storefront", "to": "Service:api-gateway" },
+        { "type": "OWNS", "from": "Team:commerce", "to": "Service:orders" },
+        { "type": "OWNS", "from": "Team:commerce", "to": "Service:payments" },
+        { "type": "OWNS", "from": "Team:platform", "to": "Service:inventory" },
+        { "type": "OWNS", "from": "Team:platform", "to": "Service:notifications" },
+        { "type": "OWNS", "from": "Team:platform", "to": "Service:orders-db" },
+        { "type": "MEMBER_OF", "from": "Person:dev-patel", "to": "Team:storefront" },
+        { "type": "MEMBER_OF", "from": "Person:ben-ortiz", "to": "Team:commerce" },
+        { "type": "MEMBER_OF", "from": "Person:chloe-wu", "to": "Team:commerce" },
+        { "type": "MEMBER_OF", "from": "Person:ada-park", "to": "Team:platform" },
+        { "type": "MEMBER_OF", "from": "Person:elif-kaya", "to": "Team:platform" },
+        { "type": "ON_CALL_FOR", "from": "Person:ada-park", "to": "Service:orders", "props": { "weekStart": "thisWeek" } },
+        { "type": "ON_CALL_FOR", "from": "Person:ada-park", "to": "Service:payments", "props": { "weekStart": "thisWeek" } },
+        { "type": "ON_CALL_FOR", "from": "Person:ada-park", "to": "Service:orders-db", "props": { "weekStart": "thisWeek" } },
+        { "type": "ON_CALL_FOR", "from": "Person:dev-patel", "to": "Service:web", "props": { "weekStart": "thisWeek" } },
+        { "type": "ON_CALL_FOR", "from": "Person:dev-patel", "to": "Service:api-gateway", "props": { "weekStart": "thisWeek" } },
+        { "type": "ON_CALL_FOR", "from": "Person:elif-kaya", "to": "Service:orders", "props": { "weekStart": "lastWeek" } },
+        { "type": "ON_CALL_FOR", "from": "Person:elif-kaya", "to": "Service:payments", "props": { "weekStart": "lastWeek" } },
+        { "type": "ON_CALL_FOR", "from": "Person:dev-patel", "to": "Service:web", "props": { "weekStart": "lastWeek" } }
+      ]
+    },
+    "code": {
+      "nodes": [
+        { "label": "File", "values": { "path": "src/web/checkout.tsx", "language": "typescript" } },
+        { "label": "File", "values": { "path": "src/gateway/routes.go", "language": "go" } },
+        { "label": "File", "values": { "path": "src/orders/checkout.go", "language": "go" } },
+        { "label": "File", "values": { "path": "src/orders/retry.go", "language": "go" } },
+        { "label": "File", "values": { "path": "src/payments/client.go", "language": "go" } },
+        { "label": "File", "values": { "path": "src/payments/charge.go", "language": "go" } },
+        { "label": "File", "values": { "path": "src/inventory/stock.py", "language": "python" } },
+        { "label": "File", "values": { "path": "db/migrations/0042_orders_index.sql", "language": "sql" } },
+        { "label": "PR", "values": { "number": "101", "title": "Retry payment charges with backoff", "mergedAt": "-2d" } },
+        { "label": "PR", "values": { "number": "102", "title": "Index orders by customer_id", "mergedAt": "-6d" } },
+        { "label": "PR", "values": { "number": "103", "title": "Cache stock levels for 30 seconds", "mergedAt": "-25d" } },
+        { "label": "PR", "values": { "number": "104", "title": "New one-click checkout button", "mergedAt": "-1d" } },
+        { "label": "PR", "values": { "number": "105", "title": "Lower payments connection pool to 5", "mergedAt": "-70d" } },
+        { "label": "PR", "values": { "number": "106", "title": "Gateway timeout 5s → 2s for orders", "mergedAt": "-4d" } }
+      ],
+      "edges": [
+        { "type": "PART_OF", "from": "File:src/web/checkout.tsx", "to": "Service:web" },
+        { "type": "PART_OF", "from": "File:src/gateway/routes.go", "to": "Service:api-gateway" },
+        { "type": "PART_OF", "from": "File:src/orders/checkout.go", "to": "Service:orders" },
+        { "type": "PART_OF", "from": "File:src/orders/retry.go", "to": "Service:orders" },
+        { "type": "PART_OF", "from": "File:src/payments/client.go", "to": "Service:payments" },
+        { "type": "PART_OF", "from": "File:src/payments/charge.go", "to": "Service:payments" },
+        { "type": "PART_OF", "from": "File:src/inventory/stock.py", "to": "Service:inventory" },
+        { "type": "PART_OF", "from": "File:db/migrations/0042_orders_index.sql", "to": "Service:orders-db" },
+        { "type": "AUTHORED", "from": "Person:ben-ortiz", "to": "PR:101" },
+        { "type": "AUTHORED", "from": "Person:chloe-wu", "to": "PR:102" },
+        { "type": "AUTHORED", "from": "Person:elif-kaya", "to": "PR:103" },
+        { "type": "AUTHORED", "from": "Person:dev-patel", "to": "PR:104" },
+        { "type": "AUTHORED", "from": "Person:ben-ortiz", "to": "PR:105" },
+        { "type": "AUTHORED", "from": "Person:chloe-wu", "to": "PR:106" },
+        { "type": "MODIFIES", "from": "PR:101", "to": "File:src/payments/client.go", "props": { "additions": 48, "deletions": 6 } },
+        { "type": "MODIFIES", "from": "PR:101", "to": "File:src/orders/retry.go", "props": { "additions": 22, "deletions": 3 } },
+        { "type": "MODIFIES", "from": "PR:102", "to": "File:db/migrations/0042_orders_index.sql", "props": { "additions": 4, "deletions": 0 } },
+        { "type": "MODIFIES", "from": "PR:102", "to": "File:src/orders/checkout.go", "props": { "additions": 12, "deletions": 9 } },
+        { "type": "MODIFIES", "from": "PR:103", "to": "File:src/inventory/stock.py", "props": { "additions": 30, "deletions": 2 } },
+        { "type": "MODIFIES", "from": "PR:104", "to": "File:src/web/checkout.tsx", "props": { "additions": 80, "deletions": 15 } },
+        { "type": "MODIFIES", "from": "PR:105", "to": "File:src/payments/client.go", "props": { "additions": 1, "deletions": 1 } },
+        { "type": "MODIFIES", "from": "PR:106", "to": "File:src/gateway/routes.go", "props": { "additions": 2, "deletions": 2 } },
+        { "type": "MODIFIES", "from": "PR:106", "to": "File:src/orders/checkout.go", "props": { "additions": 6, "deletions": 1 } }
+      ]
+    },
+    "incidents": {
+      "nodes": [
+        { "label": "Alert", "values": { "title": "payments error rate high", "metric": "payments_charge_errors_ratio" } },
+        { "label": "Alert", "values": { "title": "inventory oversold", "metric": "inventory_negative_stock_total" } },
+        { "label": "Runbook", "values": { "title": "Drain the payments retry queue", "steps": "Pause the orders retry worker\nCheck the payment provider status page\nRaise the payments pool back to 20 connections\nResume the worker and watch the error ratio" } },
+        { "label": "Runbook", "values": { "title": "Flush the inventory cache", "steps": "Set CACHE_TTL=0 on inventory\nRestart inventory\nReconcile negative stock from orders-db" } },
+        { "label": "Incident", "values": { "key": "INC-001", "title": "payments timeouts after the pool was shrunk", "severity": "SEV2", "startedAt": "-60d", "summary": "Payment charges timed out for 20 minutes; orders retried and piled up behind 5 connections.", "rootCause": "PR #105 lowered the payments connection pool to 5; retries from orders exhausted it." } },
+        { "label": "Incident", "values": { "key": "INC-002", "title": "coffee oversold during the flash sale", "severity": "SEV3", "startedAt": "-20d", "summary": "Inventory kept serving cached stock during a sale, so the shop sold beans it did not have.", "rootCause": "PR #103 cached stock levels for 30 seconds without invalidation on sale." } }
+      ],
+      "edges": [
+        { "type": "FIRED_ON", "from": "Alert:payments-error-rate-high", "to": "Service:payments" },
+        { "type": "FIRED_ON", "from": "Alert:inventory-oversold", "to": "Service:inventory" },
+        { "type": "APPLIES_TO", "from": "Runbook:drain-the-payments-retry-queue", "to": "Service:payments" },
+        { "type": "APPLIES_TO", "from": "Runbook:flush-the-inventory-cache", "to": "Service:inventory" },
+        { "type": "AFFECTED", "from": "Incident:INC-001", "to": "Service:payments" },
+        { "type": "AFFECTED", "from": "Incident:INC-001", "to": "Service:orders" },
+        { "type": "CAUSED_BY", "from": "Incident:INC-001", "to": "PR:105" },
+        { "type": "RESOLVED_BY", "from": "Incident:INC-001", "to": "Runbook:drain-the-payments-retry-queue" },
+        { "type": "RESPONDED_BY", "from": "Incident:INC-001", "to": "Person:ada-park" },
+        { "type": "TRIGGERED_BY", "from": "Incident:INC-001", "to": "Alert:payments-error-rate-high" },
+        { "type": "AFFECTED", "from": "Incident:INC-002", "to": "Service:inventory" },
+        { "type": "CAUSED_BY", "from": "Incident:INC-002", "to": "PR:103" },
+        { "type": "RESOLVED_BY", "from": "Incident:INC-002", "to": "Runbook:flush-the-inventory-cache" },
+        { "type": "RESPONDED_BY", "from": "Incident:INC-002", "to": "Person:elif-kaya" },
+        { "type": "TRIGGERED_BY", "from": "Incident:INC-002", "to": "Alert:inventory-oversold" }
+      ]
+    },
+    "knowledge": {
+      "nodes": [
+        { "label": "Doc", "values": { "title": "ADR-001: Retry payment charges", "text": "We retry failed charges up to 5 times with exponential backoff (200 ms base) because the payment provider drops about 1% of requests. Every retry reuses the same idempotency key so a customer is never charged twice." } },
+        { "label": "Decision", "values": { "key": "ADR-001", "title": "Retry payment charges with backoff", "status": "accepted", "decidedAt": "-10d", "context": "The payment provider drops about 1% of charge requests, which fails checkouts.", "decision": "Retry up to 5 times with exponential backoff and the same idempotency key." } },
+        { "label": "Decision", "values": { "key": "ADR-002", "title": "Keep orders and payments in one Postgres", "status": "accepted", "decidedAt": "-200d", "context": "Orders and payments must commit together.", "decision": "One Postgres (orders-db) with both schemas; split later if load requires it." } },
+        { "label": "Issue", "values": { "key": "OPS-12", "title": "Can payment retries double-charge?", "status": "open", "body": "With PR #101 we retry charges 5 times. If the provider times out after charging, do we charge twice? Need to verify idempotency keys end to end." } },
+        { "label": "Thread", "values": { "title": "Why do we retry payments 5 times?", "channel": "#team-commerce", "text": "Dev Patel: why 5 retries on payments? Feels like a lot.\nBen Ortiz: the provider drops ~1% of requests; ADR-001 has the numbers. Idempotency keys keep it safe.\nChloe Wu: but the pool is small, so retries can queue up. Remember INC-001." } }
+      ],
+      "edges": [
+        { "type": "ABOUT", "from": "Doc:adr-001-retry-payment-charges", "to": "Service:payments" },
+        { "type": "ABOUT", "from": "Decision:ADR-001", "to": "Service:payments" },
+        { "type": "JUSTIFIES", "from": "Decision:ADR-001", "to": "PR:101" },
+        { "type": "DOCUMENTED_IN", "from": "Decision:ADR-001", "to": "Doc:adr-001-retry-payment-charges" },
+        { "type": "DECIDED_BY", "from": "Decision:ADR-001", "to": "Team:commerce" },
+        { "type": "ABOUT", "from": "Decision:ADR-002", "to": "Service:orders-db" },
+        { "type": "ABOUT", "from": "Decision:ADR-002", "to": "Service:orders" },
+        { "type": "ABOUT", "from": "Issue:OPS-12", "to": "Service:payments" },
+        { "type": "MENTIONS", "from": "Issue:OPS-12", "to": "PR:101" },
+        { "type": "POSTED", "from": "Person:chloe-wu", "to": "Issue:OPS-12" },
+        { "type": "ABOUT", "from": "Thread:why-do-we-retry-payments-5-times", "to": "Service:payments" },
+        { "type": "MENTIONS", "from": "Thread:why-do-we-retry-payments-5-times", "to": "Decision:ADR-001" },
+        { "type": "MENTIONS", "from": "Thread:why-do-we-retry-payments-5-times", "to": "Incident:INC-001" },
+        { "type": "POSTED", "from": "Person:dev-patel", "to": "Thread:why-do-we-retry-payments-5-times" }
+      ]
+    }
+  }
+}

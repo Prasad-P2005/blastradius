@@ -26,7 +26,7 @@
  *   kubernetes-manifests/*.yaml  env `*_SERVICE_ADDR`, `REDIS_ADDR`, `FRONTEND_ADDR`
  *   kustomize/components/shopping-assistant/  AlloyDB for the assistant
  */
-import type { Tenant } from "@blastradius/shared";
+import type { SeedPack as Tenant } from "@blastradius/shared";
 
 export interface DepDef {
   from: string;

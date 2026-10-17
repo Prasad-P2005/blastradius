@@ -19,7 +19,7 @@
  * (`cart`, `checkout`, `product-catalog`…), so the demo reads the same on both.
  * globex's k8s deployment names (`cartservice`…) are kept in `deployment`.
  */
-import type { Tenant } from "@blastradius/shared";
+import type { SeedPack as Tenant } from "@blastradius/shared";
 
 export type ServiceKind = "service" | "frontend" | "datastore" | "queue" | "proxy" | "external" | "tool";
 

@@ -13,7 +13,7 @@
 import {
   AGENT_INFO,
   InvestigateRequestSchema,
-  TENANT_INFO,
+  tenantInfo,
   type AgentEvent,
   type AgentName,
   type Claim,
@@ -90,7 +90,7 @@ async function runPipeline(
   // Lesson 6: the user's message is in Postgres BEFORE run_started (bounded wait; pg is optional).
   await withTimeout(
     (async () => {
-      await deps.db.ensureTenant(req.tenant, TENANT_INFO[req.tenant].name);
+      await deps.db.ensureTenant(req.tenant, tenantInfo(req.tenant).name);
       await deps.db.createSession({ id: sessionId, tenant: req.tenant, mode: req.mode, title: req.message.slice(0, 160) });
       await deps.db.addMessage({ sessionId, role: "user", content: req.message, runId });
     })(),

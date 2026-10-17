@@ -7,8 +7,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  TENANTS,
-  TENANT_INFO,
+  isTenant,
+  tenantInfo,
   type AgentEvent,
   type CloseIncidentRequest,
   type GNode,
@@ -30,6 +30,8 @@ import { Banner, Dot, Kbd, Spinner, cx } from "@/components/ui";
 import { RunView } from "./RunView";
 import { WhyDrawer } from "./WhyDrawer";
 import { CloseIncidentDialog } from "./CloseIncidentDialog";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { GraphSwitcher, NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
 
 const LS_TENANT = "br.tenant";
 
@@ -65,6 +67,14 @@ export function Console() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const nonce = useRef(0);
 
+  // the graphs that exist (FalkorDB GRAPH.LIST); data is only fetched for one of them
+  const graphs = useGraphs();
+  const ready = fixture || Boolean(graphs?.some((g) => g.id === tenant));
+  useEffect(() => {
+    if (fixture || !graphs || graphs.length === 0 || graphs.some((g) => g.id === tenant)) return;
+    setTenant(graphs[0]!.id); // the saved or linked graph is gone: fall back to the newest one
+  }, [graphs, tenant, fixture]);
+
   /* ── boot ── */
   useEffect(() => {
     setFixture(fixtureEnabled());
@@ -77,7 +87,7 @@ export function Console() {
       /* storage blocked */
     }
     const pick = t ?? saved;
-    if (pick && (TENANTS as readonly string[]).includes(pick)) setTenant(pick as Tenant);
+    if (pick && isTenant(pick)) setTenant(pick);
     if (params.get("mode") === "ask") setMode("ask");
   }, []);
 
@@ -114,6 +124,7 @@ export function Console() {
   }, [tenant, fixture]);
 
   useEffect(() => {
+    if (!ready) return;
     let alive = true;
     setOverview(null);
     setExpanded(null);
@@ -134,7 +145,7 @@ export function Console() {
     return () => {
       alive = false;
     };
-  }, [tenant, fixture, refreshSessions]);
+  }, [tenant, fixture, refreshSessions, ready]);
 
   /* keep the newest event in view */
   useEffect(() => {
@@ -189,10 +200,10 @@ export function Console() {
 
   /* ── sending ── */
   const send = useCallback(
-    async (message: string, extra?: { scenario?: Scenario }) => {
+    async (message: string, extra?: { scenario?: Scenario; mode?: InvestigationMode }) => {
       const text = message.trim();
       if (!text || streaming) return;
-      const runMode = extra?.scenario?.mode ?? mode;
+      const runMode = extra?.scenario?.mode ?? extra?.mode ?? mode;
       if (extra?.scenario) setMode(extra.scenario.mode);
       setInput("");
       setPending(text);
@@ -235,6 +246,27 @@ export function Console() {
   );
 
   const stop = () => abortRef.current?.abort();
+
+  /* ── deep links from /start and /data: ?scenario=<id> or ?q=<text> run once on arrival ── */
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || fixture) return;
+    const p = new URLSearchParams(window.location.search);
+    const scenarioId = p.get("scenario");
+    const q = p.get("q");
+    if (!scenarioId && !q) return;
+    // wait until the boot effect has switched to the linked tenant (and its scenarios are loaded)
+    if (p.get("tenant") && p.get("tenant") !== tenant) return;
+    const scenario = scenarioId ? scenarios.find((s) => s.id === scenarioId) : undefined;
+    if (scenarioId && !scenario) return;
+    autoStarted.current = true;
+    // drop the trigger from the URL so a reload doesn't start a second run
+    p.delete("scenario");
+    p.delete("q");
+    window.history.replaceState(null, "", `${window.location.pathname}${p.size ? `?${p}` : ""}`);
+    if (scenario) void send(scenario.question, { scenario });
+    else void send(q!, { mode: p.get("mode") === "ask" ? "ask" : "incident" });
+  }, [scenarios, tenant, send, fixture]);
 
   /* ── graph ── */
   const latest = runs.at(-1) ?? null;
@@ -306,28 +338,18 @@ export function Console() {
     !!latest && latest.mode === "incident" && latest.status === "ok" && !!latest.runId && !closedRuns.has(latest.runId) && !sessionClosed && !streaming;
   const closeInitial = useMemo(() => (canClose && latest ? prefillClose(latest) : null), [canClose, latest]);
 
+  if (!fixture && graphs && graphs.length === 0) return <NoGraphs />;
+
   return (
     <div className="flex h-full flex-col">
       {/* ── top bar ── */}
-      <header className="relative z-20 flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
+      <header className="relative z-20 flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3 whitespace-nowrap">
         <div className="flex items-center gap-2">
           <Logo />
           <span className="text-sm font-semibold tracking-tight">Blastradius</span>
         </div>
         <Divider />
-        <div className="flex items-center rounded-md border border-line bg-panel-2 p-0.5">
-          {TENANTS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => switchTenant(t)}
-              title={TENANT_INFO[t].description}
-              className={cx("rounded px-2 py-0.5 text-xs", t === tenant ? "bg-panel-3 text-fg shadow-sm" : "text-muted hover:text-fg")}
-            >
-              {TENANT_INFO[t].name}
-            </button>
-          ))}
-        </div>
+        <GraphSwitcher tenant={tenant} graphs={graphs} onChange={switchTenant} />
 
         <div className="relative">
           <button
@@ -410,12 +432,19 @@ export function Console() {
             <Dot ok={health ? health.postgres.ok : healthErr ? false : null} /> Postgres
           </span>
           <Divider />
+          <Link href="/start" className="text-xs text-fg-2 hover:text-fg">
+            Graphs
+          </Link>
+          <Link href={`/build?tenant=${tenant}`} className="text-xs text-fg-2 hover:text-fg">
+            Builder
+          </Link>
           <Link href={`/people?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
             People
           </Link>
           <Link href={`/memory?tenant=${tenant}${fixture ? "&fixture=1" : ""}${sessionId ? `&session=${sessionId}` : ""}`} className="text-xs text-fg-2 hover:text-fg">
-            Memory inspector →
+            Memory →
           </Link>
+          <UserMenu compact />
         </div>
       </header>
 
@@ -519,7 +548,7 @@ export function Console() {
               <span>
                 <Kbd>Enter</Kbd> send · <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd> newline · <Kbd>Esc</Kbd> close / clear focus
               </span>
-              <span className="ml-auto font-mono">{TENANT_INFO[tenant].sourceRepo}</span>
+              <span className="ml-auto font-mono">{tenantInfo(tenant).sourceRepo ?? ""}</span>
             </div>
           </div>
         </section>
@@ -535,7 +564,7 @@ export function Console() {
             error={overviewErr}
             expanding={expanding}
             fitKey={`${tenant}:${overview ? 1 : 0}:${runs.length}:${latest?.status ?? ""}`}
-            title={`${TENANT_INFO[tenant].name} graph`}
+            title={`${graphs?.find((g) => g.id === tenant)?.name ?? tenantInfo(tenant).name} graph`}
             onNodeClick={onNodeClick}
             onClearSelection={() => setSelected(null)}
             onClearFocus={() => setFocus(null)}
@@ -573,7 +602,7 @@ function EmptyState({ tenant, mode, scenarios, onPick, disabled }: { tenant: Ten
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-4 pt-6">
       <div>
-        <div className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">{TENANT_INFO[tenant].name}</div>
+        <div className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">{tenantInfo(tenant).name}</div>
         <h1 className="mt-1 text-lg font-semibold tracking-tight">{mode === "incident" ? "What's on fire?" : "Ask the company"}</h1>
         <p className="mt-1 text-sm text-muted">
           {mode === "incident"
@@ -583,7 +612,11 @@ function EmptyState({ tenant, mode, scenarios, onPick, disabled }: { tenant: Ten
       </div>
       <div className="flex flex-col gap-1.5">
         <div className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">Scenarios</div>
-        {ordered.length === 0 && <div className="text-xs text-faint">No scenarios loaded for this tenant.</div>}
+        {ordered.length === 0 && (
+          <div className="rounded-md border border-dashed border-line-2 px-3 py-3 text-xs leading-relaxed text-muted">
+            This graph has no ready-made scenarios. Type an alert below, like “payments 5xx at 12%”, using the name of a service in your graph.
+          </div>
+        )}
         {ordered.map((s) => (
           <button
             key={s.id}

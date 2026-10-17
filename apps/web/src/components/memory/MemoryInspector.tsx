@@ -9,12 +9,14 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
-import { AGENT_INFO, TENANTS, TENANT_INFO, type EpisodeView, type Finding, type GNode, type MemoryInspectorData, type Tenant } from "@blastradius/shared";
+import { AGENT_INFO, isTenant, type EpisodeView, type Finding, type GNode, type MemoryInspectorData, type Tenant } from "@blastradius/shared";
 import { api } from "@/lib/api";
 import { fixtureEnabled, loadFixtureMemory } from "@/lib/fixture";
 import { fmtAgo, fmtDate, fmtTime, labelColor } from "@/lib/format";
 import { ConfidenceBar, CypherBlock, SectionTitle, Spinner, UidPill, cx } from "@/components/ui";
 import { Logo } from "@/components/console/Console";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { GraphSwitcher, NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
 
 const ForceGraph = dynamic(() => import("@/components/graph/ForceGraph"), { ssr: false });
 
@@ -30,6 +32,11 @@ const AGENT_ACCENT: Record<string, string> = {
 export function MemoryInspector() {
   const [fixture, setFixture] = useState(false);
   const [tenant, setTenant] = useState<Tenant>("acme");
+  const graphs = useGraphs();
+  useEffect(() => {
+    // the linked graph doesn't exist (any more): fall back to the newest one
+    if (graphs && graphs.length > 0 && !graphs.some((g) => g.id === tenant)) setTenant(graphs[0]!.id);
+  }, [graphs, tenant]);
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [data, setData] = useState<MemoryInspectorData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +49,7 @@ export function MemoryInspector() {
     const p = new URLSearchParams(window.location.search);
     setFixture(fixtureEnabled());
     const t = p.get("tenant");
-    if (t && (TENANTS as readonly string[]).includes(t)) setTenant(t as Tenant);
+    if (t && isTenant(t)) setTenant(t);
     const s = p.get("session");
     if (s) setSessionId(s);
     setReady(true);
@@ -78,6 +85,8 @@ export function MemoryInspector() {
   const sess = data?.session;
   const subgraph = data?.subgraph ?? { nodes: [], edges: [] };
 
+  if (graphs && graphs.length === 0) return <NoGraphs />;
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
@@ -87,13 +96,7 @@ export function MemoryInspector() {
         </Link>
         <span className="h-4 w-px bg-line-2" />
         <span className="text-sm text-fg-2">Memory inspector</span>
-        <div className="flex items-center rounded-md border border-line bg-panel-2 p-0.5">
-          {TENANTS.map((t) => (
-            <button key={t} type="button" onClick={() => switchTenant(t)} className={cx("rounded px-2 py-0.5 text-xs", t === tenant ? "bg-panel-3 text-fg" : "text-muted hover:text-fg")}>
-              {TENANT_INFO[t].name}
-            </button>
-          ))}
-        </div>
+        <GraphSwitcher tenant={tenant} graphs={graphs} onChange={switchTenant} />
         <span className="font-mono text-2xs text-faint">graph blastradius_{tenant}</span>
         {loading && <Spinner />}
         <div className="ml-auto flex items-center gap-3">
@@ -107,6 +110,7 @@ export function MemoryInspector() {
           <Link href={`/?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
             ← Console
           </Link>
+          <UserMenu />
         </div>
       </header>
 

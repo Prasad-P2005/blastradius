@@ -12,7 +12,7 @@ import {
   MEMORY_LABELS,
   NODE_LABELS,
   REL_TYPES,
-  TENANTS,
+  TenantSchema,
   TOOL_DESCRIPTIONS,
   TOOL_NAMES,
   ToolInputSchemas,
@@ -38,7 +38,7 @@ export function requiresSession(t: ToolName): boolean {
   return (SESSION_REQUIRED_TOOLS as readonly string[]).includes(t);
 }
 
-const tenantField = z.enum(TENANTS).describe("Which tenant graph to query (one FalkorDB graph per tenant)");
+const tenantField = TenantSchema.describe("Which graph to query (one FalkorDB graph per workspace; read blastradius://tenants for the list)");
 const sessionIdField = z
   .string()
   .min(1)
@@ -145,7 +145,7 @@ export const DOCUMENTED_INDEXES = {
 /** The static body of `blastradius://schema`. */
 export function staticSchema(exposed: readonly ToolName[]) {
   return {
-    graphPerTenant: TENANTS.map((t) => `blastradius_${t}`),
+    graphPerTenant: "blastradius_<graph id> (one per workspace; see blastradius://tenants)",
     labels: NODE_LABELS.map((l) => ({
       label: l,
       memory: (MEMORY_LABELS as readonly string[]).includes(l),

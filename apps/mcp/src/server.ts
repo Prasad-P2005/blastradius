@@ -9,10 +9,8 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { counts, runCypher, runTool, toolSpecs } from "@blastradius/graph";
+import { counts, listWorkspaces, runCypher, runTool, toolSpecs } from "@blastradius/graph";
 import {
-  TENANTS,
-  TENANT_INFO,
   TOOL_DESCRIPTIONS,
   TOOL_NAMES,
   graphName,
@@ -118,17 +116,18 @@ export function createMcpServer(opts: ServerOptions = {}): McpServer {
     "blastradius://tenants",
     {
       title: "Tenants",
-      description: "The tenants (one FalkorDB graph each) with display info and live node counts.",
+      description: "Every graph (one FalkorDB graph per workspace) with display info and live node counts.",
       mimeType: "application/json",
     },
     async (uri) => {
+      // every workspace graph on the server (FalkorDB GRAPH.LIST), with live counts
       const tenants = await Promise.all(
-        TENANTS.map(async (t) => {
+        (await listWorkspaces()).map(async (w) => {
           // Mirrors graphKey() in packages/graph (not part of its public API).
           const ns = process.env.BLASTRADIUS_GRAPH_NAMESPACE;
-          const base = { id: t, graph: ns ? `${ns}_${graphName(t)}` : graphName(t), ...TENANT_INFO[t] };
+          const base = { id: w.id, graph: ns ? `${ns}_${graphName(w.id)}` : graphName(w.id), name: w.name, description: w.description, seeded: w.seeded };
           try {
-            return { ...base, counts: await counts(t) };
+            return { ...base, counts: await counts(w.id) };
           } catch (err) {
             return { ...base, counts: null, countsError: errorMessage(err) };
           }
@@ -160,7 +159,7 @@ export function createMcpServer(opts: ServerOptions = {}): McpServer {
 /** Indexes as FalkorDB reports them, per tenant (`CALL db.indexes()`); an error string if unreachable. */
 async function liveIndexes(): Promise<Record<string, Json>> {
   const out: Record<string, Json> = {};
-  for (const t of TENANTS) {
+  for (const t of (await listWorkspaces()).map((w) => w.id)) {
     try {
       const { rows } = await runCypher(
         t,

@@ -20,7 +20,7 @@ import { findingFromProps, listGraphSessions, LIST_SESSIONS_CYPHER } from "./mem
 import { labelOfUid, num, str } from "./tools/common.ts";
 
 /** Builds a Subgraph from raw rows: standalone node columns + path columns. */
-function subgraphFromRaw(raw: unknown[], nodeColumns: string[], pathColumns: string[]): Subgraph {
+export function subgraphFromRaw(raw: unknown[], nodeColumns: string[], pathColumns: string[]): Subgraph {
   const merged = mergePaths(pathsFromRaw(raw, pathColumns));
   const nodes = new Map<string, GNode>(merged.nodes.map((n) => [n.id, n]));
   for (const row of raw) {

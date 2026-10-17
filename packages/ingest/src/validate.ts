@@ -16,7 +16,7 @@
  *   - no email address anywhere in the serialized JSON
  *   - scenarios reference nodes that exist, suspects are human PRs
  */
-import { MEMORY_LABELS, NODE_LABELS, REL_TYPES, isNodeLabel, isRelType, parseUid, type NodeLabel, type RelType, type Scenario, type Snapshot, type SnapshotEdge, type SnapshotNode, type Tenant } from "@blastradius/shared";
+import { MEMORY_LABELS, NODE_LABELS, REL_TYPES, isNodeLabel, isRelType, parseUid, type NodeLabel, type RelType, type Scenario, type Snapshot, type SnapshotEdge, type SnapshotNode, type SeedPack as Tenant } from "@blastradius/shared";
 import { isoDate, mondayOf } from "./time.ts";
 
 /** Any email-looking token. Deliberately broad: a false positive just fails the build. */

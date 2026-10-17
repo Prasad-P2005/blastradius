@@ -8,7 +8,7 @@ loadRootEnv();
 
 import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { TENANTS, type Scenario, type Snapshot, type SnapshotEdge, type SnapshotNode, type Tenant } from "@blastradius/shared";
+import { TENANTS, type Scenario, type Snapshot, type SnapshotEdge, type SnapshotNode, type SeedPack as Tenant } from "@blastradius/shared";
 import { emailErrors, validateGraph, validateScenarios, validateSnapshot } from "../validate.ts";
 import { dataPath } from "./common.ts";
 

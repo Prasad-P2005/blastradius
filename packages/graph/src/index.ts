@@ -40,3 +40,10 @@ export { overview, neighborhood, counts, memoryInspector } from "./reads.ts";
 // loading
 export { loadSnapshot, ingestDelta, resetGraph } from "./load.ts";
 export type { LoadStats } from "./load.ts";
+
+// workspaces (one graph per workspace) + the hand builder
+export { listWorkspaces, getWorkspace, createWorkspace, deleteWorkspace, workspaceExists, markSeeded, ensureWorkspaceNode } from "./workspaces.ts";
+export type { WorkspaceInfo } from "./workspaces.ts";
+export { addNode, addEdge, addMany, addSample, deleteNode, deleteEdge, listNodes, graphDump, buildNode, refreshDerived } from "./builder.ts";
+export type { BuilderSample } from "./builder.ts";
+export type { BuilderResult } from "./builder.ts";

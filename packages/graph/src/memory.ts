@@ -354,6 +354,7 @@ export async function recallMemory(
 
   // De-duplicate by uid (a memory can match several branches); keep the first,
   // but remember a similarity if any branch had one.
+  const anchored = (x?: GraphPath) => Boolean(service && x?.nodes.some((n) => n.id === service));
   const byUid = new Map<string, { row: Row; path?: GraphPath }>();
   rows.forEach((r, i) => {
     const u = str(r.uid);
@@ -363,11 +364,17 @@ export async function recallMemory(
       if (prev.row.distance === null && r.distance !== null && r.distance !== undefined) prev.row.distance = r.distance;
       // prefer the path anchored at the investigated service (the "why it is relevant here")
       const p = perRowPaths[i];
-      const anchored = (x?: GraphPath) => Boolean(service && x?.nodes.some((n) => n.id === service));
       if (p && anchored(p) && !anchored(prev.path)) prev.path = p;
     }
   });
-  const kept = [...byUid.values()].slice(0, args.limit);
+  // Rank before cutting to `limit`. The Cypher sorts by recency only, so once a
+  // tenant has a few sessions, fresh findings from unrelated runs would crowd
+  // out an older resolved incident on the very service that is alerting.
+  // Order: incidents on the service (procedural memory: "what worked last
+  // time"), findings about the service, other incidents, other findings.
+  // The sort is stable, so recency still decides within a tier.
+  const tier = ({ row, path }: { row: Row; path?: GraphPath }) => (anchored(path) ? 0 : 2) + (row.kind === "incident" ? 0 : 1);
+  const kept = [...byUid.values()].sort((a, b) => tier(a) - tier(b)).slice(0, args.limit);
 
   const memories: RecalledMemory[] = kept.map(({ row: r, path }) => {
     const m: RecalledMemory = {

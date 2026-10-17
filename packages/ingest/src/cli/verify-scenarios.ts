@@ -16,7 +16,7 @@
 import { loadRootEnv } from "@blastradius/shared/env";
 loadRootEnv();
 
-import type { Scenario, Snapshot, SnapshotEdge, SnapshotNode, Tenant } from "@blastradius/shared";
+import type { Scenario, Snapshot, SnapshotEdge, SnapshotNode, SeedPack as Tenant } from "@blastradius/shared";
 import { closeFalkor, embeddingBackend, ingestDelta, loadSnapshot, runTool } from "@blastradius/graph";
 import { readJson } from "../write.ts";
 import { boolArg, dataPath, fail, parseArgs, tenantsFromArgs } from "./common.ts";

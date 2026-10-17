@@ -8,12 +8,14 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TENANTS, TENANT_INFO, type PersonActivity, type PersonActivityItem, type PersonActivityKind, type PersonSummary, type Tenant } from "@blastradius/shared";
+import { isTenant, type PersonActivity, type PersonActivityItem, type PersonActivityKind, type PersonSummary, type Tenant } from "@blastradius/shared";
 import { api } from "@/lib/api";
 import { fixtureEnabled, loadFixturePeople } from "@/lib/fixture";
 import { fmtAgo, labelColor, uidKey } from "@/lib/format";
 import { CypherBlock, SectionTitle, Spinner, UidPill, cx } from "@/components/ui";
 import { Logo } from "@/components/console/Console";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { GraphSwitcher, NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
 
 const POLL_MS = 5_000;
 const NEW_HIGHLIGHT_MS = 6_000;
@@ -35,6 +37,11 @@ export function People() {
   const [fixture, setFixture] = useState(false);
   const [ready, setReady] = useState(false);
   const [tenant, setTenant] = useState<Tenant>("acme");
+  const graphs = useGraphs();
+  useEffect(() => {
+    // the linked graph doesn't exist (any more): fall back to the newest one
+    if (graphs && graphs.length > 0 && !graphs.some((g) => g.id === tenant)) setTenant(graphs[0]!.id);
+  }, [graphs, tenant]);
   const [people, setPeople] = useState<PersonSummary[]>([]);
   const [peopleErr, setPeopleErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -54,7 +61,7 @@ export function People() {
     const p = new URLSearchParams(window.location.search);
     setFixture(fixtureEnabled());
     const t = p.get("tenant");
-    if (t && (TENANTS as readonly string[]).includes(t)) setTenant(t as Tenant);
+    if (t && isTenant(t)) setTenant(t);
     const uid = p.get("uid");
     if (uid) setSelected(uid);
     setReady(true);
@@ -162,6 +169,8 @@ export function People() {
   const botCount = people.filter((p) => !p.persona && p.isBot).length;
   const person = activity?.person ?? people.find((p) => p.uid === selected) ?? null;
 
+  if (graphs && graphs.length === 0) return <NoGraphs />;
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
@@ -171,13 +180,7 @@ export function People() {
         </Link>
         <span className="h-4 w-px bg-line-2" />
         <span className="text-sm text-fg-2">People</span>
-        <div className="flex items-center rounded-md border border-line bg-panel-2 p-0.5">
-          {TENANTS.map((t) => (
-            <button key={t} type="button" onClick={() => switchTenant(t)} className={cx("rounded px-2 py-0.5 text-xs", t === tenant ? "bg-panel-3 text-fg" : "text-muted hover:text-fg")}>
-              {TENANT_INFO[t].name}
-            </button>
-          ))}
-        </div>
+        <GraphSwitcher tenant={tenant} graphs={graphs} onChange={switchTenant} />
         <div className="ml-auto flex items-center gap-3">
           {fixture && <span className="rounded border border-warn/40 bg-warn/10 px-1.5 font-mono text-2xs text-warn">FIXTURE</span>}
           <Link href={`/memory?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
@@ -186,6 +189,7 @@ export function People() {
           <Link href={`/?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
             ← Console
           </Link>
+          <UserMenu />
         </div>
       </header>
 

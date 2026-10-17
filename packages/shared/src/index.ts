@@ -18,11 +18,28 @@ import { z } from "zod";
  * Tenants — one FalkorDB graph per tenant.
  * ──────────────────────────────────────────────────────────────────────── */
 
-export const TENANTS = ["acme", "globex"] as const;
-export type Tenant = (typeof TENANTS)[number];
-export const TenantSchema = z.enum(TENANTS);
+/**
+ * A tenant is any graph a user created: a lowercase slug, stored as the
+ * FalkorDB key `blastradius_<slug>`. The live list comes from FalkorDB
+ * (`listWorkspaces` in @blastradius/graph), not from this file.
+ */
+export type Tenant = string;
+export const TENANT_SLUG_RE = /^[a-z][a-z0-9-]{1,29}$/;
+export const TenantSchema = z.string().regex(TENANT_SLUG_RE, "graph id: 2-30 chars, lowercase letters, digits and dashes, starting with a letter");
 
-export const TENANT_INFO: Record<Tenant, { name: string; sourceRepo: string; description: string }> = {
+/**
+ * Sample datasets that can be seeded into a graph on demand (data/<pack>.json,
+ * built from real public git history). They are NOT loaded by default.
+ * `TENANTS` is the old name, kept for the ingest/agents scripts that iterate the packs.
+ */
+export const SEED_PACKS = ["acme", "globex"] as const;
+export type SeedPack = (typeof SEED_PACKS)[number];
+export const TENANTS = SEED_PACKS;
+export function isSeedPack(x: unknown): x is SeedPack {
+  return typeof x === "string" && (SEED_PACKS as readonly string[]).includes(x);
+}
+
+export const TENANT_INFO: Record<SeedPack, { name: string; sourceRepo: string; description: string }> = {
   acme: {
     name: "Acme Shop",
     sourceRepo: "open-telemetry/opentelemetry-demo",
@@ -35,13 +52,23 @@ export const TENANT_INFO: Record<Tenant, { name: string; sourceRepo: string; des
   },
 };
 
+/** Display info for any tenant: the seed pack's info, or a title made from the slug. */
+export function tenantInfo(tenant: Tenant): { name: string; sourceRepo?: string; description: string } {
+  if (isSeedPack(tenant)) return TENANT_INFO[tenant];
+  const name = tenant
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+  return { name, description: "A graph built by hand in the builder." };
+}
+
 /** FalkorDB graph key for a tenant. Never build graph names any other way. */
 export function graphName(tenant: Tenant): string {
   return `blastradius_${tenant}`;
 }
 
 export function isTenant(x: unknown): x is Tenant {
-  return typeof x === "string" && (TENANTS as readonly string[]).includes(x);
+  return typeof x === "string" && TENANT_SLUG_RE.test(x);
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -65,6 +92,8 @@ export const NODE_LABELS = [
   "Incident",
   "Runbook",
   "Alert",
+  // graph metadata: one node per graph (name, description, seed packs loaded)
+  "Workspace",
   // agent memory (written at runtime)
   "Session",
   "Episode",
@@ -640,7 +669,7 @@ export interface AlertInput {
 
 export interface Scenario {
   id: string;
-  tenant: Tenant;
+  tenant: SeedPack;
   title: string;
   mode: InvestigationMode;
   /** what the user types / what the alert says */
@@ -704,7 +733,7 @@ export interface SnapshotEdge {
   props?: Record<string, Json>;
 }
 export interface Snapshot {
-  tenant: Tenant;
+  tenant: SeedPack;
   /** ISO; deterministic (derived from source data, not wall clock) */
   generatedAt: string;
   sources: { repo: string; url: string; sha: string; license: string }[];
@@ -732,6 +761,7 @@ export const LABEL_COLORS: Record<NodeLabel, string> = {
   Episode: "#cbd5e1",
   Finding: "#e879f9",
   Agent: "#818cf8",
+  Workspace: "#64748b",
 };
 
 /** Max rows a model sees from one tool result (the UI gets everything). */
@@ -853,3 +883,176 @@ export interface PersonActivity {
   items: PersonActivityItem[];
   cypher: string[];
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Graph builder: what a user may create by hand in /build.
+ * The graph package validates against these; the web forms render from them.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Relationships a user may draw, with their direction (source → target).
+ * Derived types (TOUCHES, COLLABORATES_WITH) and agent memory are left out:
+ * the loader derives the first two, the agents write memory.
+ */
+export const REL_SHAPES: Partial<Record<RelType, { from: readonly NodeLabel[]; to: readonly NodeLabel[]; help: string; props?: readonly string[] }>> = {
+  DEPENDS_ON: { from: ["Service"], to: ["Service"], help: "caller → callee: if the callee fails, the caller breaks", props: ["protocol"] },
+  OWNS: { from: ["Team"], to: ["Service"], help: "the team responsible for the service" },
+  MEMBER_OF: { from: ["Person"], to: ["Team"], help: "a person is on a team" },
+  ON_CALL_FOR: { from: ["Person"], to: ["Service"], help: "on call for one week (weekStart = a Monday)", props: ["weekStart"] },
+  PART_OF: { from: ["File"], to: ["Service"], help: "a source file belongs to a service" },
+  AUTHORED: { from: ["Person"], to: ["PR"], help: "who wrote the pull request" },
+  MODIFIES: { from: ["PR"], to: ["File"], help: "a PR changed this file (TOUCHES Service is derived from it)" },
+  AFFECTED: { from: ["Incident"], to: ["Service"], help: "the incident hit this service" },
+  CAUSED_BY: { from: ["Incident"], to: ["PR"], help: "the change that caused the incident" },
+  RESOLVED_BY: { from: ["Incident"], to: ["Runbook"], help: "the runbook that fixed it" },
+  RESPONDED_BY: { from: ["Incident"], to: ["Person"], help: "who worked the incident" },
+  TRIGGERED_BY: { from: ["Incident"], to: ["Alert"], help: "the alert that opened the incident" },
+  FIRED_ON: { from: ["Alert"], to: ["Service"], help: "the service the alert watches" },
+  APPLIES_TO: { from: ["Runbook"], to: ["Service"], help: "the service a runbook is for" },
+  ABOUT: { from: ["Decision", "Doc", "Issue", "Thread"], to: ["Service"], help: "what the knowledge is about" },
+  JUSTIFIES: { from: ["Decision"], to: ["PR"], help: "the decision behind a change" },
+  DOCUMENTED_IN: { from: ["Decision"], to: ["Doc"], help: "where the decision is written down" },
+  DECIDED_BY: { from: ["Decision"], to: ["Person", "Team"], help: "who made the decision" },
+  POSTED: { from: ["Person"], to: ["Thread", "Issue"], help: "who wrote the thread or filed the ticket" },
+  MENTIONS: { from: ["Issue", "Thread", "Doc", "Decision", "Incident"], to: ["Service", "PR", "Person", "Incident", "Decision", "Issue"], help: "a reference in the text" },
+};
+
+export type BuilderFieldKind = "text" | "longtext" | "int" | "date" | "enum" | "lines";
+export interface BuilderField {
+  name: string;
+  label: string;
+  kind: BuilderFieldKind;
+  required?: boolean;
+  options?: readonly string[];
+  placeholder?: string;
+}
+
+/**
+ * Hand-creatable node labels: their fields and how the uid key is derived.
+ * `key` names the field whose (slugified, unless numeric/path) value becomes
+ * the uid key, e.g. Service name "Cart API" → `Service:cart-api`.
+ */
+export const NODE_FORMS: Partial<Record<NodeLabel, { help: string; key: string; slug: boolean; fields: readonly BuilderField[] }>> = {
+  Service: {
+    help: "Something that runs and can fail. The center of the graph.",
+    key: "name",
+    slug: true,
+    fields: [
+      { name: "name", label: "Name", kind: "text", required: true, placeholder: "checkout" },
+      { name: "tier", label: "Tier", kind: "enum", options: ["1", "2", "3"], placeholder: "1 = customer-facing" },
+      { name: "language", label: "Language", kind: "text", placeholder: "go" },
+      { name: "description", label: "Description", kind: "longtext", placeholder: "What it does" },
+    ],
+  },
+  Team: {
+    help: "A group of people that owns services.",
+    key: "name",
+    slug: true,
+    fields: [
+      { name: "name", label: "Name", kind: "text", required: true, placeholder: "Payments" },
+      { name: "slack", label: "Chat channel", kind: "text", placeholder: "#team-payments" },
+    ],
+  },
+  Person: {
+    help: "An engineer. Keyed by a slug of their name (never an email).",
+    key: "name",
+    slug: true,
+    fields: [
+      { name: "name", label: "Name", kind: "text", required: true, placeholder: "Ada Lovelace" },
+      { name: "role", label: "Role", kind: "text", placeholder: "SRE" },
+    ],
+  },
+  File: {
+    help: "A source file. Its path is its key.",
+    key: "path",
+    slug: false,
+    fields: [
+      { name: "path", label: "Path", kind: "text", required: true, placeholder: "src/checkout/main.go" },
+      { name: "language", label: "Language", kind: "text", placeholder: "go" },
+    ],
+  },
+  PR: {
+    help: "A merged pull request. Keyed by its number.",
+    key: "number",
+    slug: false,
+    fields: [
+      { name: "number", label: "Number", kind: "int", required: true, placeholder: "101" },
+      { name: "title", label: "Title", kind: "text", required: true, placeholder: "Add retries to payment client" },
+      { name: "mergedAt", label: "Merged on", kind: "date", required: true },
+    ],
+  },
+  Incident: {
+    help: "A past outage. Embedded, so agents find similar ones by meaning.",
+    key: "key",
+    slug: false,
+    fields: [
+      { name: "key", label: "Id", kind: "text", required: true, placeholder: "INC-001" },
+      { name: "title", label: "Title", kind: "text", required: true, placeholder: "checkout 5xx after deploy" },
+      { name: "severity", label: "Severity", kind: "enum", options: ["SEV1", "SEV2", "SEV3"] },
+      { name: "startedAt", label: "Started on", kind: "date", required: true },
+      { name: "summary", label: "Summary", kind: "longtext", placeholder: "What happened" },
+      { name: "rootCause", label: "Root cause", kind: "longtext" },
+    ],
+  },
+  Runbook: {
+    help: "The steps that fix a known problem.",
+    key: "title",
+    slug: true,
+    fields: [
+      { name: "title", label: "Title", kind: "text", required: true, placeholder: "Roll back checkout" },
+      { name: "steps", label: "Steps (one per line)", kind: "lines", placeholder: "kubectl rollout undo deploy/checkout" },
+    ],
+  },
+  Alert: {
+    help: "A monitoring alert.",
+    key: "title",
+    slug: true,
+    fields: [
+      { name: "title", label: "Title", kind: "text", required: true, placeholder: "checkout error rate high" },
+      { name: "metric", label: "Metric", kind: "text", placeholder: "http_server_errors_ratio" },
+    ],
+  },
+  Decision: {
+    help: "An architecture decision (ADR). Embedded for Ask the company.",
+    key: "key",
+    slug: false,
+    fields: [
+      { name: "key", label: "Id", kind: "text", required: true, placeholder: "ADR-001" },
+      { name: "title", label: "Title", kind: "text", required: true, placeholder: "Use Postgres for orders" },
+      { name: "status", label: "Status", kind: "enum", options: ["accepted", "proposed", "superseded"] },
+      { name: "decidedAt", label: "Decided on", kind: "date" },
+      { name: "context", label: "Context", kind: "longtext" },
+      { name: "decision", label: "Decision", kind: "longtext" },
+    ],
+  },
+  Doc: {
+    help: "A document or wiki page. Embedded for Ask the company.",
+    key: "title",
+    slug: true,
+    fields: [
+      { name: "title", label: "Title", kind: "text", required: true },
+      { name: "text", label: "Text", kind: "longtext", required: true },
+    ],
+  },
+  Issue: {
+    help: "A ticket. Embedded for Ask the company.",
+    key: "key",
+    slug: false,
+    fields: [
+      { name: "key", label: "Id", kind: "text", required: true, placeholder: "OPS-12" },
+      { name: "title", label: "Title", kind: "text", required: true },
+      { name: "status", label: "Status", kind: "enum", options: ["open", "closed"] },
+      { name: "body", label: "Body", kind: "longtext" },
+    ],
+  },
+  Thread: {
+    help: "A chat thread. Embedded for Ask the company.",
+    key: "title",
+    slug: true,
+    fields: [
+      { name: "title", label: "Title", kind: "text", required: true },
+      { name: "channel", label: "Channel", kind: "text", placeholder: "#sre" },
+      { name: "text", label: "Messages", kind: "longtext", required: true, placeholder: "Ada: why is checkout on Postgres?" },
+    ],
+  },
+};

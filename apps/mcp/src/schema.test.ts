@@ -4,11 +4,11 @@ import { REL_TYPES, TOOL_NAMES, WRITE_TOOLS } from "@blastradius/shared";
 import { REL_DIRECTIONS, exposedToolNames, isMemoryTool, staticSchema, toolInputShape } from "./schema.ts";
 
 describe("tool input shapes", () => {
-  it("every tool requires a tenant enum", () => {
+  it("every tool requires a well-formed tenant (graph id)", () => {
     for (const t of TOOL_NAMES) {
       const schema = z.object(toolInputShape(t));
       expect(schema.safeParse({}).success, t).toBe(false);
-      expect(schema.safeParse({ tenant: "nope" }).success, t).toBe(false);
+      expect(schema.safeParse({ tenant: "Not A Graph!" }).success, t).toBe(false);
     }
     expect(z.object(toolInputShape("critical_services")).safeParse({ tenant: "acme" }).success).toBe(true);
   });

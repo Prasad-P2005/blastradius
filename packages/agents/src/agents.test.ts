@@ -269,7 +269,7 @@ describe("scripted pipeline over a fake executor", () => {
   });
 
   it("rejects invalid requests synchronously", () => {
-    expect(() => investigate({ tenant: "nope", mode: "incident", message: "x" } as never)).toThrow();
+    expect(() => investigate({ tenant: "Not A Graph!", mode: "incident", message: "x" } as never)).toThrow();
   });
 });
 

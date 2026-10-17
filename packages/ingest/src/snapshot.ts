@@ -10,7 +10,7 @@
  * TOUCHES (PR→Service) is NOT written here: packages/graph derives it at load.
  * The same PR→subgraph code is reused for delta files (`buildPrSubgraph`).
  */
-import { uid, type Json, type Snapshot, type SnapshotEdge, type SnapshotNode, type Tenant } from "@blastradius/shared";
+import { uid, type Json, type Snapshot, type SnapshotEdge, type SnapshotNode, type SeedPack as Tenant } from "@blastradius/shared";
 import { DEPENDENCIES } from "./deps.ts";
 import { readMergedPrs, type RawPr } from "./git.ts";
 import { GraphBuilder } from "./graph-builder.ts";
