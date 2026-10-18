@@ -9,10 +9,11 @@ loadRootEnv();
 
 import { checkoutPinned, cloneOrFetch, git } from "../git.ts";
 import { SOURCES } from "../sources.ts";
+import { GIT_PACKS } from "@blastradius/shared";
 import { ROOT, fail, parseArgs, tenantsFromArgs } from "./common.ts";
 
 try {
-  for (const tenant of tenantsFromArgs(parseArgs())) {
+  for (const tenant of tenantsFromArgs(parseArgs(), GIT_PACKS)) {
     const src = SOURCES[tenant];
     const { dir, head, action } = cloneOrFetch(src, ROOT);
     checkoutPinned(dir, src.snapshotSha);

@@ -173,7 +173,9 @@ export function validateGraph(nodes: SnapshotNode[], edges: SnapshotEdge[], opts
 export function validateSnapshot(snap: Snapshot, raw: string, opts: ValidateOptions = {}): string[] {
   const errors = validateGraph(snap.nodes, snap.edges, opts);
   errors.push(...emailErrors(raw));
-  if (!snap.sources?.length || snap.sources.some((s) => !/^[0-9a-f]{40}$/.test(s.sha))) errors.push("sources: need repo + 40-char sha");
+  // a hand-written pack (every node synthetic) has no upstream repo to pin
+  const allSynthetic = snap.nodes.every((n) => n.props.synthetic === true);
+  if ((!snap.sources?.length && !allSynthetic) || snap.sources?.some((s) => !/^[0-9a-f]{40}$/.test(s.sha))) errors.push("sources: need repo + 40-char sha");
   if (!Number.isInteger(snap.seed)) errors.push("seed must be an integer");
   if (Number.isNaN(Date.parse(snap.generatedAt))) errors.push("generatedAt must be ISO");
   return errors;

@@ -10,7 +10,7 @@
  * TOUCHES (PR→Service) is NOT written here: packages/graph derives it at load.
  * The same PR→subgraph code is reused for delta files (`buildPrSubgraph`).
  */
-import { uid, type Json, type Snapshot, type SnapshotEdge, type SnapshotNode, type SeedPack as Tenant } from "@blastradius/shared";
+import { uid, type Json, type Snapshot, type SnapshotEdge, type SnapshotNode, type GitPack as Tenant } from "@blastradius/shared";
 import { DEPENDENCIES } from "./deps.ts";
 import { readMergedPrs, type RawPr } from "./git.ts";
 import { GraphBuilder } from "./graph-builder.ts";
@@ -121,6 +121,8 @@ export function selectPrs(all: RawPr[], src: SourceConfig): { kept: RawPr[]; mis
 }
 
 export interface RealSnapshot extends Snapshot {
+  /** only the git pipeline builds real snapshots */
+  tenant: Tenant;
   /** Extra bookkeeping for `synth` (not part of the contract; stripped from data/*.json). */
   meta: { headSha: string; prsInHistory: number; humanPrs: number; botPrs: number; missingLandmarks: number[] };
 }

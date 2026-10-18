@@ -63,7 +63,7 @@ export function createMcpServer(opts: ServerOptions = {}): McpServer {
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
       instructions:
-        "Blastradius incident and company-knowledge tools over a FalkorDB graph. Every tool needs `tenant` (acme or globex). " +
+        "Blastradius incident and company-knowledge tools over a FalkorDB graph. Every tool needs `tenant` (acme, globex or slice). " +
         "Node references are uids like 'Service:checkout' or 'PR:4087'; use search_nodes to resolve a name. " +
         "Read blastradius://schema for the graph model.",
     },

@@ -21,7 +21,7 @@
  *            (ShoppingAssistant launch, scratch base images, adservice
  *            profiler). This is still 100% real history, just an older cut.
  */
-import type { SeedPack as Tenant } from "@blastradius/shared";
+import type { GitPack as Tenant } from "@blastradius/shared";
 
 export interface SourceConfig {
   tenant: Tenant;

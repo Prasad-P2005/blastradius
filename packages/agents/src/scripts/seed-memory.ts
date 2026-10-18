@@ -104,6 +104,30 @@ const PLANS: Record<Tenant, SeedPlan> = {
     open: "globex-assistant-timeouts",
     ask: "globex-ask-assistant",
   },
+  slice: {
+    closed: [
+      {
+        scenario: "slice-menu-down",
+        severity: "SEV2",
+        steps: [
+          "Check menu error rate and worker count on the menu dashboard",
+          "Review {pr} for pricing changes that make the menu slower",
+          "Roll back {pr}; confirm the app shows prices again",
+        ],
+      },
+      {
+        scenario: "slice-driver-map",
+        severity: "SEV3",
+        steps: [
+          "Check the age of the latest driver location on the delivery dashboard",
+          "Review {pr} for changes to when locations are sent",
+          "Roll back {pr} if the map froze at its deploy time",
+        ],
+      },
+    ],
+    open: "slice-payments-failing",
+    ask: "slice-ask-queue",
+  },
 };
 
 function toRequest(s: Scenario, message = s.question): InvestigateRequest {

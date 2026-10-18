@@ -31,12 +31,16 @@ export function parseArgs(argv = process.argv.slice(2)): Record<string, string |
   return out;
 }
 
-/** `--tenant acme` → ['acme']; absent → all tenants. */
-export function tenantsFromArgs(args: Record<string, string | boolean>): Tenant[] {
+/**
+ * `--tenant acme` → ['acme']; absent → every pack in `packs`.
+ * The git pipeline (clone, snapshot, synth) passes GIT_PACKS; load, validate
+ * and verify-scenarios take every seed pack, hand-written ones included.
+ */
+export function tenantsFromArgs<T extends Tenant>(args: Record<string, string | boolean>, packs: readonly T[] = TENANTS as readonly Tenant[] as readonly T[]): T[] {
   const t = args.tenant;
-  if (t === undefined || t === true) return [...TENANTS];
-  if (typeof t === "string" && isTenant(t)) return [t];
-  throw new Error(`--tenant must be one of ${TENANTS.join(", ")}`);
+  if (t === undefined || t === true) return [...packs];
+  if (typeof t === "string" && isTenant(t) && (packs as readonly string[]).includes(t)) return [t as T];
+  throw new Error(`--tenant must be one of ${packs.join(", ")}`);
 }
 
 /** `--reset false` / `--no-reset` → false; default true. */

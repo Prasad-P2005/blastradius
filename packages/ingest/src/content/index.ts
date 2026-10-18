@@ -1,5 +1,5 @@
 /** Per-tenant hand-written synthetic content. */
-import type { SeedPack as Tenant } from "@blastradius/shared";
+import type { GitPack as Tenant } from "@blastradius/shared";
 import type { TenantContent } from "../synth/types.ts";
 import { ACME_CONTENT } from "./acme.ts";
 import { GLOBEX_CONTENT } from "./globex.ts";

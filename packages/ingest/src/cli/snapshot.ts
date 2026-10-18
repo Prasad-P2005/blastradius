@@ -12,10 +12,11 @@ import { cloneDirFor, git } from "../git.ts";
 import { buildDelta, buildRealSnapshot } from "../snapshot.ts";
 import { REAL_DIR, SOURCES } from "../sources.ts";
 import { SNAPSHOT_KEY_ORDER, stableStringify, writeText } from "../write.ts";
+import { GIT_PACKS } from "@blastradius/shared";
 import { ROOT, dataPath, fail, parseArgs, tenantsFromArgs } from "./common.ts";
 
 try {
-  for (const tenant of tenantsFromArgs(parseArgs())) {
+  for (const tenant of tenantsFromArgs(parseArgs(), GIT_PACKS)) {
     const src = SOURCES[tenant];
     const dir = cloneDirFor(src, ROOT);
     let head = "";

@@ -28,11 +28,20 @@ export const TENANT_SLUG_RE = /^[a-z][a-z0-9-]{1,29}$/;
 export const TenantSchema = z.string().regex(TENANT_SLUG_RE, "graph id: 2-30 chars, lowercase letters, digits and dashes, starting with a letter");
 
 /**
- * Sample datasets that can be seeded into a graph on demand (data/<pack>.json,
- * built from real public git history). They are NOT loaded by default.
+ * Packs built from real public git history by the ingest pipeline
+ * (`pnpm data:build`: clone → snapshot → synth).
+ */
+export const GIT_PACKS = ["acme", "globex"] as const;
+export type GitPack = (typeof GIT_PACKS)[number];
+
+/**
+ * Sample datasets that can be seeded into a graph on demand (data/<pack>.json).
+ * acme and globex come from real git history; slice is a small, fully
+ * synthetic pizza-delivery company written by hand (packages/ingest/src/handmade)
+ * so the demo has one example anyone can follow without knowing the code.
  * `TENANTS` is the old name, kept for the ingest/agents scripts that iterate the packs.
  */
-export const SEED_PACKS = ["acme", "globex"] as const;
+export const SEED_PACKS = [...GIT_PACKS, "slice"] as const;
 export type SeedPack = (typeof SEED_PACKS)[number];
 export const TENANTS = SEED_PACKS;
 export function isSeedPack(x: unknown): x is SeedPack {
@@ -49,6 +58,11 @@ export const TENANT_INFO: Record<SeedPack, { name: string; sourceRepo: string; d
     name: "Globex Boutique",
     sourceRepo: "GoogleCloudPlatform/microservices-demo",
     description: "Online Boutique (Google microservices demo), real git history + synthetic org data.",
+  },
+  slice: {
+    name: "Slice Pizza",
+    sourceRepo: "synthetic, hand-written",
+    description: "A small pizza-delivery company (app, orders, payments, kitchen, drivers). Fully synthetic: the easy example.",
   },
 };
 

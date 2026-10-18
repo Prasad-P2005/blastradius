@@ -10,7 +10,7 @@ loadRootEnv();
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { TENANTS, type Scenario } from "@blastradius/shared";
+import { GIT_PACKS, TENANTS, type Scenario } from "@blastradius/shared";
 import type { RealSnapshot } from "../snapshot.ts";
 import { REAL_DIR } from "../sources.ts";
 import { synthesize } from "../synth/index.ts";
@@ -18,9 +18,9 @@ import { SNAPSHOT_KEY_ORDER, readJson, stableArray, stableStringify, writeText }
 import { ROOT, dataPath, fail, parseArgs, tenantsFromArgs } from "./common.ts";
 
 try {
-  const tenants = tenantsFromArgs(parseArgs());
+  const tenants = tenantsFromArgs(parseArgs(), GIT_PACKS);
   const scenariosFile = dataPath("scenarios.json");
-  const scenarios: Scenario[] = existsSync(scenariosFile) ? readJson<Scenario[]>(scenariosFile).filter((s) => !tenants.includes(s.tenant)) : [];
+  const scenarios: Scenario[] = existsSync(scenariosFile) ? readJson<Scenario[]>(scenariosFile).filter((s) => !(tenants as readonly string[]).includes(s.tenant)) : [];
   for (const tenant of tenants) {
     const real = readJson<RealSnapshot>(join(ROOT, REAL_DIR, `${tenant}.real.json`));
     const { snapshot, scenarios: sc, stats } = synthesize(real);

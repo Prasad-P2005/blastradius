@@ -54,7 +54,7 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
 export function tenantFrom(url: URL | string): Tenant {
   const u = typeof url === "string" ? new URL(url) : url;
   const raw = u.searchParams.get("tenant");
-  if (!raw) throw new HttpError(400, "missing ?tenant= (acme | globex)");
+  if (!raw) throw new HttpError(400, "missing ?tenant= (acme | globex | slice)");
   const parsed = TenantSchema.safeParse(raw);
   if (!parsed.success) throw new HttpError(400, `unknown tenant: ${raw}`);
   return parsed.data;
