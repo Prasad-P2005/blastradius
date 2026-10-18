@@ -18,14 +18,34 @@ import { toPlain } from "./convert.ts";
 
 let clientPromise: Promise<FalkorDB> | null = null;
 
+/**
+ * FalkorDB Cloud shows its URL as `redis://falkordb@host:port`: a user, no password.
+ * node-redis lets credentials parsed from the URL override the options, so that
+ * URL silently drops FALKORDB_PASSWORD (WRONGPASS). Move a password-less user out
+ * of the URL into the `username` option instead. URLs with a password are kept as is.
+ */
+export function splitUrlUser(raw: string): { url: string; username?: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return { url: raw };
+  }
+  if (!parsed.username || parsed.password) return { url: raw };
+  const username = decodeURIComponent(parsed.username);
+  parsed.username = "";
+  return { url: parsed.toString(), username };
+}
+
 /** The FalkorDB client singleton. Throws (rejects) if the server is unreachable. */
 export function getFalkor(): Promise<FalkorDB> {
   if (!clientPromise) {
     loadRootEnv();
-    const url = process.env.FALKORDB_URL || "redis://localhost:6380";
+    const { url, username } = splitUrlUser(process.env.FALKORDB_URL || "redis://localhost:6380");
     const password = process.env.FALKORDB_PASSWORD || undefined;
     clientPromise = FalkorDB.connect({
       url,
+      username,
       password,
       socket: {
         connectTimeout: 5000,
