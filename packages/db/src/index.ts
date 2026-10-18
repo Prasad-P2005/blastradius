@@ -37,7 +37,9 @@ export function getDb(): Db | null {
   if (db && url === dbUrl) return db;
   client = postgres(url, {
     max: 10,
-    connect_timeout: 3, // seconds — fail fast; Postgres is optional
+    // seconds — fail fast; Postgres is optional. Serverless Postgres (Neon free tier)
+    // suspends when idle and can take longer to wake, so deploys raise it via env.
+    connect_timeout: Number(process.env.PG_CONNECT_TIMEOUT) || 3,
     idle_timeout: 20,
     onnotice: () => {},
   });

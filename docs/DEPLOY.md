@@ -17,7 +17,7 @@ Status legend used below: **verified** means we ran it; **unverified** means it'
 
 1. Sign up at https://app.falkordb.cloud and create a database (the free tier is enough for two small tenant graphs).
 2. From the instance's connection details, copy the **host**, **port**, **username** (usually `default`) and **password**.
-3. Set:
+3. Set (FalkorDB Cloud shows the URL as `redis://falkordb@<host>:<port>`; that form works, the client moves the user into the options):
    ```bash
    FALKORDB_URL=redis://<host>:<port>
    FALKORDB_PASSWORD=<password>
@@ -73,7 +73,7 @@ Steps:
 1. Push the repo to GitHub.
 2. In Render: **New → Blueprint**, pick the repo. Render reads `render.yaml`.
 3. Fill in the `sync: false` secrets when prompted: `FALKORDB_URL`, `FALKORDB_PASSWORD`, `DATABASE_URL`, and optionally `ANTHROPIC_API_KEY` (enables llm mode), `GITHUB_TOKEN` + `GITHUB_SANDBOX_REPO` (real issues and rollback PRs), `WEBHOOK_URL`.
-4. Deploy. The web service runs `pnpm db:migrate` as a **pre-deploy command**. Render only offers pre-deploy commands on paid instance types; on the free tier, run `pnpm db:migrate` from your laptop instead (section 2).
+4. Deploy. `render.yaml` uses the **free** plan in the **singapore** region (next to FalkorDB Cloud ap-south-1 and Neon ap-southeast-1). Free instances have no pre-deploy commands, so run `pnpm db:migrate` from your laptop (section 2). They also sleep after 15 minutes idle: keep the web service awake with an uptime monitor pinging `/api/health` every 5 to 10 minutes. 750 free hours a month cover one always-on service, not two.
 5. Seed the graph (section 3) if you haven't.
 
 Render routes traffic to the port in `PORT` (set to 3000 for web and 3333 for MCP in `render.yaml`).

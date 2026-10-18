@@ -11,11 +11,14 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     # The last Dockerfile stage is `web`, so no build target is needed here.
-    plan: starter
+    # Free plan: sleeps after 15 min idle and has no pre-deploy commands, so run
+    # `pnpm db:migrate` from your laptop (docs/DEPLOY.md). On a paid plan, add
+    # `preDeployCommand: pnpm db:migrate` to migrate on every deploy.
+    plan: free
+    # Next to the databases: FalkorDB Cloud (ap-south-1) and Neon (ap-southeast-1).
+    # An investigation runs dozens of graph queries; each one pays the round trip.
+    region: singapore
     healthCheckPath: /api/health
-    # Applies Drizzle migrations to Postgres before each deploy (pre-deploy
-    # commands need a paid instance type on Render).
-    preDeployCommand: pnpm db:migrate
     envVars:
       - key: PORT
         value: "3000"
@@ -25,6 +28,9 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      # Neon's free tier suspends when idle; give a cold start time to wake.
+      - key: PG_CONNECT_TIMEOUT
+        value: "10"
       - key: AGENT_MODE
         value: auto
       - key: LLM_PROVIDER
@@ -56,7 +62,8 @@ services:
     dockerContext: .
     # Same image as the web service; run the MCP server instead of Next.js.
     dockerCommand: pnpm --filter @blastradius/mcp start
-    plan: starter
+    plan: free
+    region: singapore
     healthCheckPath: /health
     envVars:
       - key: PORT
