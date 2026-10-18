@@ -865,8 +865,10 @@ export interface HealthStatus {
 export interface PersonSummary {
   uid: string;
   name: string;
-  /** true = fictional persona; false = real public git author */
+  /** true = fictional persona; false = an author of PRs in the graph */
   persona: boolean;
+  /** true = invented (every persona, and the authors in a hand-written pack like slice); false = real public git author */
+  synthetic: boolean;
   /** persona role, e.g. "SRE", "Engineering manager", "Support lead" */
   role?: string;
   isBot: boolean;

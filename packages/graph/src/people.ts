@@ -45,7 +45,7 @@ WITH currentWeek, p, count(DISTINCT f) AS findings
 OPTIONAL MATCH (p)-[:MEMBER_OF]->(t:Team)
 WITH currentWeek, p, findings, collect(t.uid)[0] AS team
 RETURN p.uid AS uid, p.name AS name, coalesce(p.persona, false) AS persona, p.role AS role,
-       coalesce(p.isBot, false) AS isBot, team, findings,
+       coalesce(p.isBot, false) AS isBot, coalesce(p.synthetic, false) AS synthetic, team, findings,
        size([(p)-[:AUTHORED]->(x:PR) | x]) AS prs,
        size([(p)-[:POSTED]->(x) | x]) AS posts,
        size([(x:Incident)-[:RESPONDED_BY]->(p) | x]) AS incidents,
@@ -62,6 +62,7 @@ function toSummary(r: Row): PersonSummary {
     uid: str(r.uid),
     name: str(r.name),
     persona: r.persona === true,
+    synthetic: r.synthetic === true,
     isBot: r.isBot === true,
     onCallNow: Array.isArray(r.onCallNow) ? [...new Set(r.onCallNow.map(String))] : [],
     counts: {
