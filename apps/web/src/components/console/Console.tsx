@@ -2,13 +2,13 @@
 /**
  * The incident console (`/`). Owns all client state:
  *   tenant · mode · session · runs (via the pure reducer) · graph data · focus · drawers.
- * Left: chat timeline. Right: force graph. Overlays: Why? drawer, close-incident dialog.
+ * Inside the app shell: tabs (alert / question), then the runs as plain-language
+ * summaries (RunSummary) with the agent log collapsed, and the service map on the right.
+ * Overlays: Why? drawer, close-incident dialog.
  */
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   isTenant,
-  tenantInfo,
   type AgentEvent,
   type CloseIncidentRequest,
   type GNode,
@@ -26,12 +26,12 @@ import { prefillClose } from "@/lib/close-prefill";
 import { fixtureEnabled, fixtureInstant, FIXTURE_SCENARIOS, loadFixtureOverview, loadFixtureRun, replayFixture } from "@/lib/fixture";
 import { fmtAgo } from "@/lib/format";
 import { GraphPanel } from "@/components/graph/GraphPanel";
-import { Banner, Dot, Kbd, Spinner, cx } from "@/components/ui";
-import { RunView } from "./RunView";
+import { Banner, Spinner, cx } from "@/components/ui";
+import { AppShell, Button, Logo, Panel, StatusIcon, companyName } from "@/components/shell/AppShell";
+import { RunSummary } from "./RunSummary";
 import { WhyDrawer } from "./WhyDrawer";
 import { CloseIncidentDialog } from "./CloseIncidentDialog";
-import { UserMenu } from "@/components/auth/UserMenu";
-import { GraphSwitcher, NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
+import { NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
 
 const LS_TENANT = "br.tenant";
 
@@ -62,6 +62,7 @@ export function Console() {
   const closeOpen = closing !== null;
   const [closedRuns, setClosedRuns] = useState<Set<string>>(new Set());
   const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [showMap, setShowMap] = useState(true);
   const [loadingSession, setLoadingSession] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -147,13 +148,11 @@ export function Console() {
     };
   }, [tenant, fixture, refreshSessions, ready]);
 
-  /* keep the newest event in view */
+  /* when a new question is sent, bring the top of its result into view (the answers come first) */
+  const latestRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 240;
-    if (nearBottom || streaming) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [runs, pending, streaming]);
+    latestRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [runs.length, pending]);
 
   /* ── session controls ── */
   const resetSession = useCallback(() => {
@@ -330,248 +329,203 @@ export function Console() {
   }, [why, closeOpen]);
 
   /* ── derived ── */
-  const agentMode = latest?.agentMode ?? health?.agentMode ?? null;
-  const model = latest?.agentMode ? latest.model : health?.model;
-  const falkorDown = health ? !health.falkordb.ok : false;
   const sessionClosed = sessions.find((s) => s.sessionId === sessionId)?.status === "closed";
   const canClose =
     !!latest && latest.mode === "incident" && latest.status === "ok" && !!latest.runId && !closedRuns.has(latest.runId) && !sessionClosed && !streaming;
   const closeInitial = useMemo(() => (canClose && latest ? prefillClose(latest) : null), [canClose, latest]);
 
+  const nodeNames = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n.name])), [graph.nodes]);
+  const nameOf = useCallback((uid: string) => nodeNames.get(uid), [nodeNames]);
+
   if (!fixture && graphs && graphs.length === 0) return <NoGraphs />;
 
+  const company = companyName(tenant, graphs);
+  const pageTitle = mode === "ask" ? "Ask the company" : "Investigate an alert";
+  const started = runs.length > 0 || pending !== null;
+  const lastIndex = runs.length - 1;
+
+  const composer = (
+    <Composer
+      mode={mode}
+      value={input}
+      onChange={setInput}
+      onSend={() => void send(input)}
+      onStop={stop}
+      streaming={streaming}
+      followUp={started}
+    />
+  );
+
   return (
-    <div className="flex h-full flex-col">
-      {/* ── top bar ── */}
-      <header className="relative z-20 flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3 whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm font-semibold tracking-tight">Blastradius</span>
-        </div>
-        <Divider />
-        <GraphSwitcher tenant={tenant} graphs={graphs} onChange={switchTenant} />
-
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setSessionsOpen((o) => !o)}
-            className="flex items-center gap-1.5 rounded-md border border-line bg-panel-2 px-2 py-1 text-xs text-fg-2 hover:text-fg"
-          >
-            <span className="text-faint">session</span>
-            <span className="max-w-40 truncate font-mono text-2xs">{sessionId ?? "new"}</span>
-            {loadingSession ? <Spinner /> : <span className="text-faint">▾</span>}
-          </button>
-          {sessionsOpen && (
-            <div className="animate-fade-in absolute top-full left-0 mt-1 w-96 overflow-hidden rounded-md border border-line-2 bg-panel shadow-2xl">
-              <button
-                type="button"
-                onClick={() => {
-                  resetSession();
-                  setSessionsOpen(false);
-                }}
-                className="flex w-full items-center gap-2 border-b border-line px-3 py-2 text-left text-xs text-accent hover:bg-panel-2"
-              >
-                + New session
-              </button>
-              <div className="max-h-80 overflow-auto">
-                {sessions.length === 0 && <div className="px-3 py-2 text-xs text-faint">{fixture ? "No sessions in fixture mode." : "No past sessions for this tenant."}</div>}
-                {sessions.map((s) => (
-                  <button
-                    key={s.sessionId}
-                    type="button"
-                    onClick={() => void openSession(s)}
-                    className={cx("flex w-full flex-col gap-0.5 border-b border-line/60 px-3 py-1.5 text-left hover:bg-panel-2", s.sessionId === sessionId && "bg-panel-2")}
-                  >
-                    <span className="truncate text-xs text-fg-2">{s.title ?? s.question}</span>
-                    <span className="flex gap-2 font-mono text-2xs text-faint">
-                      <span>{s.mode}</span>
-                      <span>{s.status}</span>
-                      <span>
-                        {s.episodes} ep · {s.findings} findings
-                      </span>
-                      <span className="ml-auto">{s.startedAt ? fmtAgo(s.startedAt) : ""}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+    <AppShell
+      active={mode === "ask" ? "ask" : "investigate"}
+      tenant={tenant}
+      graphs={graphs}
+      onTenantChange={switchTenant}
+      health={health}
+      fixture={fixture}
+      layout="fill"
+      crumbs={[{ label: "Companies", href: "/start" }, { label: company, href: `/?tenant=${tenant}` }, { label: pageTitle }]}
+      title={pageTitle}
+      description={
+        mode === "ask"
+          ? "Ask how the company works or why something was decided. The answer comes from its decisions, docs, tickets and chat threads, with sources."
+          : "Describe what's wrong. Four agents walk the company graph and answer: what else breaks, what probably caused it, who can fix it, and what worked last time."
+      }
+      actions={
+        <>
+          {fixture && <span className="rounded-full bg-[#fff7e0] px-2.5 py-0.5 text-xs font-semibold text-warn">Recorded replay</span>}
+          <HistoryMenu
+            open={sessionsOpen}
+            setOpen={setSessionsOpen}
+            sessions={sessions}
+            currentId={sessionId}
+            loading={loadingSession}
+            fixture={fixture}
+            onOpen={(s) => void openSession(s)}
+          />
+          {started && (
+            <Button onClick={resetSession} disabled={streaming}>
+              New investigation
+            </Button>
           )}
-        </div>
-
-        <div className="flex items-center rounded-md border border-line bg-panel-2 p-0.5">
-          {(["incident", "ask"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={cx("rounded px-2 py-0.5 text-xs", m === mode ? "bg-panel-3 text-fg shadow-sm" : "text-muted hover:text-fg")}
-            >
-              {m === "incident" ? "Incident" : "Ask the company"}
-            </button>
-          ))}
-        </div>
-
-        <div className="ml-auto flex items-center gap-3">
-          {fixture && <span className="rounded border border-warn/40 bg-warn/10 px-1.5 font-mono text-2xs text-warn">FIXTURE REPLAY</span>}
-          {agentMode && (
-            <span
-              title={agentMode === "llm" ? `LLM tool loop${model ? ` (${model})` : ""}` : "Scripted: same tools, fixed order, deterministic"}
-              className={cx(
-                "rounded border px-1.5 font-mono text-2xs leading-[18px]",
-                agentMode === "llm" ? "border-accent/40 bg-accent/10 text-accent" : "border-line-2 bg-panel-2 text-muted",
-              )}
-            >
-              {agentMode}
-              {agentMode === "llm" && model ? ` · ${model}` : ""}
-            </span>
-          )}
-          <span className="flex items-center gap-1.5 text-2xs text-muted" title={health?.falkordb.error ?? (health ? `${health.falkordb.ms ?? "?"} ms` : healthErr ?? "")}>
-            <Dot ok={health ? health.falkordb.ok : healthErr ? false : null} /> FalkorDB
-          </span>
-          <span className="flex items-center gap-1.5 text-2xs text-muted" title={health?.postgres.error ?? (health ? `${health.postgres.ms ?? "?"} ms` : healthErr ?? "")}>
-            <Dot ok={health ? health.postgres.ok : healthErr ? false : null} /> Postgres
-          </span>
-          <Divider />
-          <Link href="/start" className="text-xs text-fg-2 hover:text-fg">
-            Graphs
-          </Link>
-          <Link href={`/build?tenant=${tenant}`} className="text-xs text-fg-2 hover:text-fg">
-            Builder
-          </Link>
-          <Link href={`/people?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
-            People
-          </Link>
-          <Link href={`/memory?tenant=${tenant}${fixture ? "&fixture=1" : ""}${sessionId ? `&session=${sessionId}` : ""}`} className="text-xs text-fg-2 hover:text-fg">
-            Memory →
-          </Link>
-          <UserMenu compact />
-        </div>
-      </header>
-
-      {falkorDown && <Banner tone="bad">FalkorDB is unreachable: {health?.falkordb.error ?? "health check failed"}. Investigations will fail until it is back.</Banner>}
+          <Button onClick={() => setShowMap((v) => !v)}>{showMap ? "Hide service map" : "Show service map"}</Button>
+        </>
+      }
+    >
       {!health && healthErr && !fixture && <Banner tone="bad">Health check failed: {healthErr}</Banner>}
 
+      {/* ── tabs ── */}
+      <div className="flex shrink-0 gap-1 border-b border-line-2/60 px-6">
+        {(["incident", "ask"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            aria-selected={m === mode}
+            role="tab"
+            className={cx(
+              "-mb-px border-b-[3px] px-3 pt-1 pb-2 text-sm font-bold",
+              m === mode ? "border-accent text-accent" : "border-transparent text-fg-2 hover:text-accent",
+            )}
+          >
+            {m === "incident" ? "Investigate an alert" : "Ask the company"}
+          </button>
+        ))}
+      </div>
+
       {/* ── body ── */}
-      <div className="relative grid min-h-0 flex-1 grid-cols-[minmax(420px,44%)_1fr]">
-        <section className="flex min-h-0 flex-col border-r border-line bg-bg">
-          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3 [scrollbar-gutter:stable]">
-            {runs.length === 0 && !pending ? (
-              <EmptyState tenant={tenant} mode={mode} scenarios={scenarios} onPick={(s) => void send(s.question, { scenario: s })} disabled={streaming} />
+      <div className={cx("relative grid min-h-0 flex-1", showMap ? "grid-cols-[minmax(0,1fr)_minmax(340px,38%)]" : "grid-cols-1")}>
+        <section className="flex min-h-0 flex-col">
+          <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5 [scrollbar-gutter:stable]">
+            {!started ? (
+              <StartPanel company={company} mode={mode} scenarios={scenarios} onPick={(s) => void send(s.question, { scenario: s })} disabled={streaming} composer={composer} />
             ) : (
-              <div className="flex flex-col gap-4">
-                {runs.map((r, i) => (
-                  <RunView
-                    key={r.runId ?? i}
-                    run={r}
-                    isLatest={i === runs.length - 1}
-                    cb={{
-                      onWhy: (findingIds) => setWhy({ run: i, findingIds }),
-                      onUid,
-                    }}
-                  />
-                ))}
+              <div className="mx-auto flex max-w-5xl flex-col gap-6">
+                {runs.map((r, i) =>
+                  i < lastIndex ? (
+                    <EarlierRun key={r.runId ?? i} run={r}>
+                      <RunSummary run={r} isLatest={false} nameOf={nameOf} cb={{ onWhy: (ids) => setWhy({ run: i, findingIds: ids }), onUid }} />
+                    </EarlierRun>
+                  ) : (
+                    <div key={r.runId ?? i} ref={latestRef} className="scroll-mt-4">
+                    <RunSummary
+                      run={r}
+                      isLatest
+                      nameOf={nameOf}
+                      cb={{ onWhy: (ids) => setWhy({ run: i, findingIds: ids }), onUid }}
+                      next={
+                        canClose && closeInitial ? (
+                          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#b8d8f8] bg-[#f0f7ff] px-5 py-4">
+                            <StatusIcon tone="info" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-fg">Fixed it? Close the incident.</div>
+                              <div className="text-sm text-fg-2">The Scribe saves what happened and how it was fixed, so next time the agents recall it.</div>
+                            </div>
+                            <Button variant="primary" onClick={() => latest?.runId && setClosing({ init: closeInitial, runId: latest.runId })}>
+                              Close incident
+                            </Button>
+                          </div>
+                        ) : undefined
+                      }
+                    />
+                    </div>
+                  ),
+                )}
                 {pending && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex justify-end">
-                      <div className="max-w-[88%] rounded-lg rounded-br-sm border border-accent/25 bg-accent/10 px-3 py-2 text-sm">{pending}</div>
-                    </div>
-                    <div className="flex items-center gap-2 px-1 text-xs text-faint">
-                      <Spinner /> starting session, recalling memory…
-                    </div>
+                  <div ref={latestRef} className="flex scroll-mt-4 items-center gap-2 rounded-xl border border-line-2/50 bg-panel px-5 py-4 text-sm text-muted">
+                    <Spinner /> Starting “{pending}”: recalling past incidents…
                   </div>
                 )}
               </div>
             )}
             {localError && (
-              <div className="mt-3 rounded-md border border-bad/40 bg-bad/[0.07] px-3 py-2 text-xs text-bad">
-                <span className="font-medium">Request failed:</span> <span className="font-mono">{localError}</span>
+              <div className="mx-auto mt-4 flex max-w-5xl gap-2 rounded-xl border border-bad/30 bg-[#fff7f7] px-4 py-3 text-sm">
+                <StatusIcon tone="bad" />
+                <div>
+                  <div className="font-semibold text-bad">Something went wrong</div>
+                  <div className="font-mono text-xs text-fg-2">{localError}</div>
+                </div>
               </div>
             )}
           </div>
 
-          {/* ── composer ── */}
-          <div className="shrink-0 border-t border-line bg-panel px-3 pt-2 pb-2.5">
-            {(runs.length > 0 || pending) && scenarios.length > 0 && (
-              <div className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5">
-                {scenarios.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={streaming}
-                    onClick={() => void send(s.question, { scenario: s })}
-                    title={s.presenterNote}
-                    className="shrink-0 rounded-full border border-line-2 bg-panel-2 px-2 py-0.5 text-2xs text-muted hover:border-accent/50 hover:text-fg disabled:opacity-50"
-                  >
-                    <span className={s.mode === "ask" ? "text-[#c084fc]" : "text-bad"}>{s.mode === "ask" ? "ask" : "alert"}</span> {s.title}
-                  </button>
-                ))}
+          {/* follow-up composer + example shortcuts once a run is on screen */}
+          {started && (
+            <div className="shrink-0 border-t border-line-2/60 bg-panel px-6 pt-3 pb-3">
+              <div className="mx-auto max-w-5xl">
+                {scenarios.length > 0 && (
+                  <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    <span className="shrink-0 text-xs text-muted">Examples:</span>
+                    {scenarios.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        disabled={streaming}
+                        onClick={() => void send(s.question, { scenario: s })}
+                        title={s.question}
+                        className="shrink-0 rounded-full border border-line-2 bg-panel px-2.5 py-0.5 text-xs text-fg-2 hover:border-accent hover:text-accent disabled:opacity-50"
+                      >
+                        {s.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {composer}
               </div>
-            )}
-            {canClose && closeInitial && (
-              <div className="mb-2 flex items-center gap-2 rounded-md border border-ok/30 bg-ok/[0.06] px-2.5 py-1.5">
-                <span className="text-xs text-fg-2">Run finished with {latest?.findingOrder.length} findings.</span>
-                <button type="button" onClick={() => latest?.runId && setClosing({ init: closeInitial, runId: latest.runId })} className="ml-auto rounded bg-ok/90 px-2.5 py-1 text-xs font-medium text-bg hover:bg-ok">
-                  Close incident →
-                </button>
-              </div>
-            )}
-            <div className="flex items-end gap-2 rounded-md border border-line-2 bg-panel-2 px-2.5 py-2 focus-within:border-accent/60">
-              <textarea
-                value={input}
-                rows={2}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    void send(input);
-                  }
-                }}
-                placeholder={mode === "incident" ? "Describe the alert, e.g. “checkout 5xx at 12%”" : "Ask the company, e.g. “why did we move cart to valkey?”"}
-                className="max-h-40 min-h-[40px] flex-1 resize-none bg-transparent text-sm text-fg outline-none placeholder:text-faint"
-              />
-              {streaming ? (
-                <button type="button" onClick={stop} className="rounded border border-line-2 px-2.5 py-1 text-xs text-muted hover:text-fg">
-                  Stop
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!input.trim()}
-                  onClick={() => void send(input)}
-                  className="rounded bg-accent-2 px-3 py-1 text-xs font-medium text-white hover:bg-accent disabled:opacity-40"
-                >
-                  {mode === "incident" ? "Investigate" : "Ask"}
-                </button>
-              )}
             </div>
-            <div className="mt-1 flex items-center gap-3 text-2xs text-faint">
-              <span>
-                <Kbd>Enter</Kbd> send · <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd> newline · <Kbd>Esc</Kbd> close / clear focus
-              </span>
-              <span className="ml-auto font-mono">{tenantInfo(tenant).sourceRepo ?? ""}</span>
-            </div>
-          </div>
+          )}
         </section>
 
-        <section className="relative min-h-0">
-          <GraphPanel
-            nodes={graph.nodes}
-            edges={graph.edges}
-            involved={involved}
-            focus={focus}
-            selected={selected}
-            loading={overviewLoading}
-            error={overviewErr}
-            expanding={expanding}
-            fitKey={`${tenant}:${overview ? 1 : 0}:${runs.length}:${latest?.status ?? ""}`}
-            title={`${graphs?.find((g) => g.id === tenant)?.name ?? tenantInfo(tenant).name} graph`}
-            onNodeClick={onNodeClick}
-            onClearSelection={() => setSelected(null)}
-            onClearFocus={() => setFocus(null)}
-            onUid={onUid}
-            personHref={peopleHref}
-          />
-        </section>
+        {showMap && (
+          <section className="flex min-h-0 flex-col py-5 pr-6">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-line-2/50 bg-panel shadow-[0_1px_3px_rgba(0,7,22,0.08)]">
+              <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
+                <h2 className="text-base font-bold">Service map</h2>
+                <span className="text-xs text-muted">{latest ? "highlighted: everything this investigation touched" : "services, teams and how they depend on each other"}</span>
+              </div>
+              <div className="relative min-h-0 flex-1">
+                <GraphPanel
+                  nodes={graph.nodes}
+                  edges={graph.edges}
+                  involved={involved}
+                  focus={focus}
+                  selected={selected}
+                  loading={overviewLoading}
+                  error={overviewErr}
+                  expanding={expanding}
+                  fitKey={`${tenant}:${overview ? 1 : 0}:${runs.length}:${latest?.status ?? ""}`}
+                  title={`${company}`}
+                  onNodeClick={onNodeClick}
+                  onClearSelection={() => setSelected(null)}
+                  onClearFocus={() => setFocus(null)}
+                  onUid={onUid}
+                  personHref={peopleHref}
+                />
+              </div>
+            </div>
+          </section>
+        )}
 
         {why && runs[why.run] && (
           <WhyDrawer run={runs[why.run]!} findingIds={why.findingIds} onClose={() => setWhy(null)} onFocus={onFocusPaths} onUid={onUid} />
@@ -593,68 +547,166 @@ export function Console() {
           />
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }
 
-function EmptyState({ tenant, mode, scenarios, onPick, disabled }: { tenant: Tenant; mode: InvestigationMode; scenarios: Scenario[]; onPick: (s: Scenario) => void; disabled: boolean }) {
-  const ordered = [...scenarios].sort((a, b) => (a.mode === mode ? -1 : 0) - (b.mode === mode ? -1 : 0));
+/** The first screen: describe the problem, or pick a ready-made example. */
+function StartPanel({ company, mode, scenarios, onPick, disabled, composer }: { company: string; mode: InvestigationMode; scenarios: Scenario[]; onPick: (s: Scenario) => void; disabled: boolean; composer: React.ReactNode }) {
+  const forMode = scenarios.filter((s) => s.mode === mode);
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-4 pt-6">
-      <div>
-        <div className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">{tenantInfo(tenant).name}</div>
-        <h1 className="mt-1 text-lg font-semibold tracking-tight">{mode === "incident" ? "What's on fire?" : "Ask the company"}</h1>
-        <p className="mt-1 text-sm text-muted">
-          {mode === "incident"
-            ? "Triage, Investigator, Expert finder and Scribe work over one FalkorDB graph: what else breaks, what caused it, who can fix it, and what worked last time. Every claim has a Why? path."
-            : "The Navigator searches decisions, docs, tickets and chat threads in the same graph as the code, and answers with sources."}
-        </p>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <div className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">Scenarios</div>
-        {ordered.length === 0 && (
-          <div className="rounded-md border border-dashed border-line-2 px-3 py-3 text-xs leading-relaxed text-muted">
-            This graph has no ready-made scenarios. Type an alert below, like “payments 5xx at 12%”, using the name of a service in your graph.
+    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+      <Panel
+        title={mode === "incident" ? `What's wrong at ${company}?` : `What do you want to know about ${company}?`}
+        description={
+          mode === "incident"
+            ? "Name the service and the symptom, the way an alert would. For example: “payments failing for 25% of customers”."
+            : "Ask about a decision, a system or a person. For example: “why do orders go through a queue?”"
+        }
+      >
+        {composer}
+      </Panel>
+
+      <Panel
+        title="Or try an example"
+        description={mode === "incident" ? "Real-looking alerts for this company. Each one runs the full investigation." : "Questions this company's documents can answer."}
+      >
+        {forMode.length === 0 ? (
+          <p className="text-sm text-muted">
+            No ready-made examples for this company. Type one above, using the name of a service in the graph.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {forMode.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => onPick(s)}
+                className="group flex flex-col items-start gap-1 rounded-xl border border-line-2/70 bg-panel px-4 py-3 text-left hover:border-accent hover:shadow-[0_0_0_1px_var(--color-accent)] disabled:opacity-50"
+              >
+                <span className="flex w-full items-center gap-2">
+                  {s.mode === "incident" ? (
+                    <span className="rounded-full bg-[#fff1f1] px-2 py-0.5 text-xs font-semibold text-bad">Alert</span>
+                  ) : (
+                    <span className="rounded-full bg-[#f0f7ff] px-2 py-0.5 text-xs font-semibold text-accent">Question</span>
+                  )}
+                  <span className="text-base font-bold text-fg">{s.title}</span>
+                </span>
+                <span className="text-sm text-fg-2">{s.question}</span>
+                {s.alert && <span className="text-xs text-muted">Service: {s.alert.service}</span>}
+                <span className="mt-1 text-sm font-semibold text-accent group-hover:underline">{s.mode === "incident" ? "Investigate →" : "Ask →"}</span>
+              </button>
+            ))}
           </div>
         )}
-        {ordered.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            disabled={disabled}
-            onClick={() => onPick(s)}
-            className="group flex items-start gap-3 rounded-md border border-line bg-panel px-3 py-2 text-left hover:border-accent/50 hover:bg-panel-2 disabled:opacity-50"
-          >
-            <span className={cx("mt-0.5 rounded px-1 font-mono text-2xs uppercase", s.mode === "ask" ? "bg-[#c084fc]/15 text-[#c084fc]" : "bg-bad/15 text-bad")}>{s.mode === "ask" ? "ask" : "alert"}</span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm text-fg">{s.title}</span>
-              {s.question !== s.title && <span className="block truncate text-xs text-muted">{s.question}</span>}
-              {s.alert && (
-                <span className="mt-0.5 block font-mono text-2xs text-faint">
-                  {s.alert.service}
-                  {s.alert.metric ? ` · ${s.alert.metric}` : ""}
-                  {s.alert.value ? ` = ${s.alert.value}` : ""}
-                </span>
-              )}
-            </span>
-            <span className="text-faint group-hover:text-accent">→</span>
-          </button>
-        ))}
-      </div>
+      </Panel>
     </div>
   );
 }
 
-function Divider() {
-  return <span className="h-4 w-px bg-line-2" />;
-}
-
-export function Logo() {
+function Composer({ mode, value, onChange, onSend, onStop, streaming, followUp }: { mode: InvestigationMode; value: string; onChange: (v: string) => void; onSend: () => void; onStop: () => void; streaming: boolean; followUp: boolean }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
-      <circle cx="12" cy="12" r="10" fill="none" stroke="#f87171" strokeOpacity="0.35" strokeWidth="1.5" />
-      <circle cx="12" cy="12" r="6" fill="none" stroke="#f87171" strokeOpacity="0.7" strokeWidth="1.5" />
-      <circle cx="12" cy="12" r="2.4" fill="#f87171" />
-    </svg>
+    <div>
+      <div className="flex items-end gap-3">
+        <textarea
+          value={value}
+          rows={followUp ? 1 : 2}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              onSend();
+            }
+          }}
+          aria-label={mode === "incident" ? "Describe the alert" : "Your question"}
+          placeholder={
+            followUp
+              ? "Ask a follow-up, or describe another alert…"
+              : mode === "incident"
+                ? "e.g. payments failing for 25% of customers since 19:05"
+                : "e.g. why do orders go through a queue instead of straight to the kitchen?"
+          }
+          className="max-h-40 min-h-[40px] flex-1 resize-none rounded-lg border-2 border-line-2 bg-panel px-3 py-2 text-sm text-fg outline-none placeholder:text-faint focus:border-accent"
+        />
+        {streaming ? (
+          <Button onClick={onStop}>Stop</Button>
+        ) : (
+          <Button variant="primary" disabled={!value.trim()} onClick={onSend}>
+            {mode === "incident" ? "Investigate" : "Ask"}
+          </Button>
+        )}
+      </div>
+      <div className="mt-1.5 text-xs text-faint">Press Enter to send, Shift+Enter for a new line.</div>
+    </div>
   );
 }
+
+/** "Past investigations" dropdown (the sessions stored in Postgres). */
+function HistoryMenu({
+  open,
+  setOpen,
+  sessions,
+  currentId,
+  loading,
+  fixture,
+  onOpen,
+}: {
+  open: boolean;
+  setOpen: (f: (o: boolean) => boolean) => void;
+  sessions: SessionListItem[];
+  currentId: string | null;
+  loading: boolean;
+  fixture: boolean;
+  onOpen: (s: SessionListItem) => void;
+}) {
+  return (
+    <div className="relative">
+      <Button onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        Past investigations {loading ? <Spinner /> : <span aria-hidden>▾</span>}
+      </Button>
+      {open && (
+        <div className="animate-fade-in absolute top-full right-0 z-40 mt-1.5 w-[26rem] overflow-hidden rounded-lg border border-line-2 bg-panel shadow-xl shadow-black/15">
+          <div className="border-b border-line px-4 py-2 text-sm font-bold">Past investigations</div>
+          <div className="max-h-96 overflow-auto">
+            {sessions.length === 0 && <div className="px-4 py-3 text-sm text-muted">{fixture ? "Not available in a recorded replay." : "None yet for this company."}</div>}
+            {sessions.map((s) => (
+              <button
+                key={s.sessionId}
+                type="button"
+                onClick={() => onOpen(s)}
+                className={cx("flex w-full flex-col gap-0.5 border-b border-line px-4 py-2 text-left last:border-b-0 hover:bg-[#f0f7ff]", s.sessionId === currentId && "bg-[#f0f7ff]")}
+              >
+                <span className="truncate text-sm font-semibold text-fg">{s.title ?? s.question}</span>
+                <span className="flex gap-3 text-xs text-muted">
+                  <span>{s.mode === "ask" ? "Question" : "Alert"}</span>
+                  <span>{s.status === "closed" ? "Closed" : "Open"}</span>
+                  <span>{s.findings} answers</span>
+                  <span className="ml-auto">{s.startedAt ? fmtAgo(s.startedAt) : ""}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** An earlier run in the same session, collapsed to one line. */
+function EarlierRun({ run, children }: { run: RunState; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl border border-line-2/50 bg-panel">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-5 py-3 text-left" aria-expanded={open}>
+        <span className={cx("text-muted transition-transform", open && "rotate-90")}>▸</span>
+        <span className="text-xs text-muted">Earlier:</span>
+        <span className="truncate text-sm font-semibold text-fg">{run.question}</span>
+        <span className="ml-auto shrink-0 text-xs text-muted">{run.findingOrder.length} answers</span>
+      </button>
+      {open && <div className="border-t border-line p-4">{children}</div>}
+    </div>
+  );
+}
+
+export { Logo };

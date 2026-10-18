@@ -5,7 +5,7 @@
  */
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Logo } from "@/components/console/Console";
+import { AppShell } from "@/components/shell/AppShell";
 
 export const metadata = {
   title: "About us · Blastradius",
@@ -101,20 +101,9 @@ const ROADMAP = [
 
 export default function AboutUsPage() {
   return (
-    <div className="h-full overflow-y-auto">
-      <header className="sticky top-0 z-10 flex h-11 items-center gap-3 border-b border-line bg-panel/95 px-4 backdrop-blur">
-        <Link href="/" className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm font-semibold tracking-tight">Blastradius</span>
-        </Link>
-        <span className="h-4 w-px bg-line-2" />
-        <span className="text-sm text-fg-2">About us</span>
-        <Link href="/" className="ml-auto text-xs text-fg-2 hover:text-fg">
-          Open the console →
-        </Link>
-      </header>
+    <AppShell active="about">
 
-      <main className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
+      <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
         {/* ── hero ── */}
         <section className="pt-16 pb-14 sm:pt-24">
           <Eyebrow>Graph Hacks 2026 · FalkorDB × WeMakeDevs · all three tracks</Eyebrow>
@@ -203,7 +192,7 @@ export default function AboutUsPage() {
               <span className="font-mono text-2xs text-muted">Why? → blast_radius (the exact query that ran)</span>
               <span className="font-mono text-2xs text-faint">FalkorDB · Cypher</span>
             </div>
-            <pre className="code overflow-x-auto bg-[#07090c] p-4 text-fg-2">
+            <pre className="code overflow-x-auto bg-panel-3 p-4 text-fg-2">
               <span className="cy-comment">{"// What else breaks if $service fails?\n"}</span>
               <span className="cy-kw">CALL</span> <span className="cy-fn">algo.betweenness</span>
               {"({nodeLabels: ["}
@@ -419,8 +408,8 @@ export default function AboutUsPage() {
             </Link>
           </div>
         </section>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

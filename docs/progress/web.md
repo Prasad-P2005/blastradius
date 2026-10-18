@@ -29,10 +29,16 @@
   closed session, live ask "Why did we move cart to Valkey?" (sources ADR-001 / t-0001 / doc). globex incident via curl.
 - `src/fixtures/recorded.acme.checkout.json`: a real recorded run used as a regression test.
 
+- Light redesign in the style of the AWS console (Cloudscape tokens, Open Sans): `components/shell/AppShell.tsx`
+  (navy top bar, grouped side menu, breadcrumbs, page header) on every page except /login; `console/RunSummary.tsx`.
+  Code blocks and Cypher syntax colours moved to dark-on-light. typecheck, vitest (24) and `next build` pass;
+  screenshots checked for console, about-us and login.
+
 ## In progress
 - nothing
 
 ## Next
+- /memory (and other pages) show the bare NoGraphs screen when FalkorDB is down, even with `?fixture=1`.
 - llm mode is untested in the UI (no API key on this machine); the badge reads `run_started.agentMode/model`.
 - If agents/graph change event shapes, re-record `recorded.acme.checkout.json` from `/api/sessions/<id>/messages`.
 

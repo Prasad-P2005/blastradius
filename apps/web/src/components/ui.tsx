@@ -48,7 +48,8 @@ export function UidPill({ uid, name, onClick, size = "sm" }: { uid: string; name
         size === "xs" ? "text-2xs" : "text-xs",
         onClick && "cursor-pointer hover:brightness-125",
       )}
-      style={{ borderColor: `${color}40`, background: `${color}12`, color }}
+      // label colours are tuned for the graph canvas; darken the text so it reads on white
+      style={{ borderColor: `${color}55`, background: `${color}14`, color: `color-mix(in srgb, ${color} 62%, #000)` }}
     >
       <span className="size-1.5 shrink-0 rounded-full" style={{ background: color }} />
       <span className="opacity-70">{label}</span>
@@ -113,7 +114,7 @@ export function CopyButton({ text, label = "copy" }: { text: string; label?: str
 
 export function CypherBlock({ cypher, maxHeight = 260 }: { cypher: string; maxHeight?: number }) {
   return (
-    <pre className="code overflow-auto rounded-md border border-line bg-[#07090c] p-2.5 text-fg-2" style={{ maxHeight }}>
+    <pre className="code overflow-auto rounded-md border border-line bg-panel-3 p-2.5 text-fg-2" style={{ maxHeight }}>
       {highlightCypher(cypher).map(([cls, t], i) =>
         cls ? (
           <span key={i} className={cls}>

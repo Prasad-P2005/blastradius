@@ -52,8 +52,8 @@ export function GraphPanel(p: GraphPanelProps) {
   const involvedCount = p.involved ? [...p.involved].filter((id) => !id.includes("->")).length : 0;
 
   return (
-    <div className="relative h-full min-h-0 w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,#10141d_0%,#090b0f_70%)]">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(#ffffff05_1px,transparent_1px),linear-gradient(90deg,#ffffff05_1px,transparent_1px)] bg-[size:32px_32px]" />
+    <div className="relative h-full min-h-0 w-full overflow-hidden bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#f4f6f8_75%)]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(#0007160a_1px,transparent_1px),linear-gradient(90deg,#0007160a_1px,transparent_1px)] bg-[size:32px_32px]" />
       <ForceGraph
         nodes={p.nodes}
         edges={p.edges}

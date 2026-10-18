@@ -13,7 +13,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // the demo identity picked on /login (middleware already redirected if it's missing)
   const user = decodeUser((await cookies()).get(USER_COOKIE)?.value);
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
+      <head>
+        {/* Open Sans: the typeface of AWS's open-source Cloudscape design system. Falls back to system-ui offline. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" />
+      </head>
       <body className="h-full overflow-hidden bg-bg text-fg antialiased">
         <UserProvider user={user}>{children}</UserProvider>
       </body>

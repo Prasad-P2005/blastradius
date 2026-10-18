@@ -1,35 +1,44 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. Dark-first incident console: neutral blue-grey surfaces,
- * colour reserved for meaning (graph labels, status, confidence).
+ * Design tokens. Light console in the style of the AWS console (Cloudscape):
+ * white containers on a light grey page, a navy top bar, blue links and focus,
+ * orange for the one primary action on a screen. Colour is reserved for
+ * meaning (status, graph labels, confidence).
  */
 @theme {
-  --color-bg: #090b0f;
-  --color-panel: #0e1117;
-  --color-panel-2: #131720;
-  --color-panel-3: #191e29;
-  --color-line: #1d2330;
-  --color-line-2: #283041;
-  --color-fg: #d9dde6;
-  --color-fg-2: #b4bccb;
-  --color-muted: #8690a3;
-  --color-faint: #586174;
-  --color-accent: #8b9cff;
-  --color-accent-2: #6274f0;
-  --color-ok: #34d399;
-  --color-warn: #fbbf24;
-  --color-bad: #f87171;
-  --font-sans: "Inter", "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-bg: #f2f3f3;
+  --color-panel: #ffffff;
+  --color-panel-2: #fafafa;
+  --color-panel-3: #f1f2f3;
+  --color-line: #e9ebed;
+  --color-line-2: #c6c6cd;
+  --color-fg: #0f141a;
+  --color-fg-2: #414d5c;
+  --color-muted: #5f6b7a;
+  --color-faint: #8d99a8;
+  --color-accent: #0972d3;
+  --color-accent-2: #065aa8;
+  --color-ok: #037f0c;
+  --color-warn: #8d6605;
+  --color-bad: #d91515;
+  /* AWS-style chrome */
+  --color-brand: #ff9900;
+  --color-brand-2: #ec7211;
+  --color-nav: #232f3e;
+  --color-nav-2: #31465f;
+  --color-nav-fg: #ffffff;
+  --color-nav-muted: #d5dbdb;
+  --font-sans: "Open Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
   --text-2xs: 11px;
   --text-xs: 12px;
-  --text-sm: 13px;
+  --text-sm: 14px;
   --text-base: 14px;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -38,7 +47,7 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
-  font-size: 13.5px;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -107,8 +116,9 @@ body {
   animation: breathe 1.4s ease-in-out infinite;
 }
 
-/* Cypher / code blocks */
+/* Cypher / code blocks (dark-on-light syntax colours for the light theme) */
 .code {
+  color: var(--color-fg-2);
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.55;
@@ -116,21 +126,21 @@ body {
   tab-size: 2;
 }
 .cy-comment {
-  color: #6b7590;
+  color: #687078;
   font-style: italic;
 }
 .cy-kw {
-  color: #c4a7ff;
+  color: #7d3fc2;
 }
 .cy-label {
-  color: #7dd3fc;
+  color: #0b6bb8;
 }
 .cy-param {
-  color: #fbbf24;
+  color: #9a5b00;
 }
 .cy-str {
-  color: #86efac;
+  color: #1d7a25;
 }
 .cy-fn {
-  color: #f9a8d4;
+  color: #b0207a;
 }

@@ -34,8 +34,11 @@ export function Avatar({ name, size = 24 }: { name: string; size?: number }) {
   );
 }
 
-/** `compact` hides the name next to the avatar (the console header is crowded). */
-export function UserMenu({ compact = false }: { compact?: boolean }) {
+/**
+ * `compact` hides the name next to the avatar (the console header is crowded).
+ * `onDark` styles the trigger for the navy top bar of the app shell.
+ */
+export function UserMenu({ compact = false, onDark = false }: { compact?: boolean; onDark?: boolean }) {
   const user = useUser();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -54,7 +57,7 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
 
   if (!user) {
     return (
-      <Link href="/login" className="text-xs text-accent hover:underline">
+      <Link href="/login" className={cx("text-xs hover:underline", onDark ? "text-nav-fg" : "text-accent")}>
         Log in
       </Link>
     );
@@ -70,12 +73,12 @@ export function UserMenu({ compact = false }: { compact?: boolean }) {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)} title={`${user.name} · ${user.role}`} className="flex items-center gap-2 rounded-md px-1 py-0.5 hover:bg-panel-3" aria-haspopup="menu" aria-expanded={open}>
+      <button type="button" onClick={() => setOpen((o) => !o)} title={`${user.name} · ${user.role}`} className={cx("flex items-center gap-2 rounded-md px-1 py-0.5", onDark ? "hover:bg-nav-2" : "hover:bg-panel-3")} aria-haspopup="menu" aria-expanded={open}>
         <Avatar name={user.name} size={22} />
-        <span className={cx("hidden text-xs whitespace-nowrap text-fg-2", compact ? "2xl:inline" : "md:inline")}>{user.name}</span>
+        <span className={cx("hidden text-xs whitespace-nowrap", onDark ? "text-nav-fg" : "text-fg-2", compact ? "2xl:inline" : "md:inline")}>{user.name}</span>
       </button>
       {open && (
-        <div role="menu" className="animate-fade-in absolute top-full right-0 z-50 mt-1.5 w-60 overflow-hidden rounded-lg border border-line-2 bg-panel-2 shadow-2xl shadow-black/50">
+        <div role="menu" className="animate-fade-in absolute top-full right-0 z-50 mt-1.5 w-60 overflow-hidden rounded-lg border border-line-2 bg-panel shadow-xl shadow-black/15">
           <div className="flex items-center gap-2.5 border-b border-line p-3">
             <Avatar name={user.name} size={32} />
             <div className="min-w-0">

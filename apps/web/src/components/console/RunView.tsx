@@ -207,7 +207,7 @@ function AgentCard({ run, agent, cb }: { run: RunState; agent: AgentView; cb: Ru
         <div key={`${h.findingId}-${h.to}`} className="animate-slide-in mx-3 mb-2 flex items-center gap-2 rounded border border-dashed border-line-2 px-2 py-1 text-xs">
           <span className="font-mono text-accent">→</span>
           <span className="shrink-0 whitespace-nowrap text-fg-2">
-            handed to <span className="font-medium" style={{ color: AGENT_ACCENT[h.to] }}>{AGENT_INFO[h.to]?.title ?? h.to}</span>
+            handed to <span className="font-medium" style={{ color: `color-mix(in srgb, ${AGENT_ACCENT[h.to] ?? "#8b9cff"} 60%, #000)` }}>{AGENT_INFO[h.to]?.title ?? h.to}</span>
           </span>
           <span className="truncate text-faint" title={h.note}>
             {h.note}
@@ -268,7 +268,7 @@ function ToolCallRow({ call, cb }: { call: ToolCallView; cb: RunCallbacks }) {
         </span>
       </button>
       {open && (
-        <div className="animate-fade-in flex flex-col gap-2 border-t border-line/70 bg-[#0b0e13] px-2.5 py-2">
+        <div className="animate-fade-in flex flex-col gap-2 border-t border-line/70 bg-panel-2 px-2.5 py-2">
           <div className="font-mono text-2xs text-muted">
             <span className="text-faint">input </span>
             {JSON.stringify(call.input)}
@@ -364,7 +364,7 @@ function FinishedRow({ run }: { run: RunState }) {
 const SOURCE_LABELS = new Set(["Decision", "Doc", "Thread", "Issue", "PR", "Incident"]);
 
 /** Ask-the-company sources: the ask_company hits, each a card with a Why? chip. */
-function SourcesList({ run, agent, cb }: { run: RunState; agent: AgentView; cb: RunCallbacks }) {
+export function SourcesList({ run, agent, cb }: { run: RunState; agent: AgentView; cb: RunCallbacks }) {
   const seen = new Set<string>();
   const sources: { uid: string; label: string; title: string; similarity?: number; snippet?: string; cypher: string }[] = [];
   for (const id of agent.toolCalls) {

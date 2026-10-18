@@ -13,10 +13,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { SEED_PACKS, TENANT_INFO, TENANT_SLUG_RE, slugify, type GNode, type Json, type Tenant } from "@blastradius/shared";
 import { api, type BuilderResult, type GraphState, type StarterSample, type WorkspaceInfo } from "@/lib/api";
 import { BUILDER_STEPS, stepProgress } from "@/lib/builder-steps";
-import { Logo } from "@/components/console/Console";
+import { AppShell, ButtonLink, companyName } from "@/components/shell/AppShell";
 import { GraphPanel } from "@/components/graph/GraphPanel";
 import { CypherBlock, Spinner, cx } from "@/components/ui";
-import { UserMenu } from "@/components/auth/UserMenu";
 import { StepPanel } from "./StepPanel";
 
 interface LastRun {
@@ -78,36 +77,38 @@ export function Builder() {
   const prevId = idx > 0 ? (BUILDER_STEPS[idx - 1]?.id ?? null) : null;
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3 whitespace-nowrap">
-        <Link href="/start" className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm font-semibold tracking-tight">Blastradius</span>
-        </Link>
-        <span className="hidden h-4 w-px bg-line-2 sm:block" />
-        <span className="hidden text-sm text-fg-2 sm:inline">Graph builder</span>
-        <select
-          value={tenant ?? ""}
-          onChange={(e) => go(e.target.value || null)}
-          className="max-w-48 min-w-0 rounded-md border border-line bg-panel-2 px-2 py-1 text-xs text-fg outline-none"
-          aria-label="graph"
-        >
-          <option value="">+ New graph</option>
-          {graphs.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name} ({g.nodes})
-            </option>
-          ))}
-        </select>
-        <div className="ml-auto flex items-center gap-3">
+    <AppShell
+      active="build"
+      tenant={tenant ?? undefined}
+      graphs={graphs}
+      onTenantChange={(t) => go(t)}
+      layout="fill"
+      crumbs={[{ label: "Companies", href: "/start" }, ...(tenant ? [{ label: companyName(tenant, graphs), href: `/?tenant=${tenant}` }] : []), { label: "Graph builder" }]}
+      title={tenant ? `Graph builder: ${companyName(tenant, graphs)}` : "Create a company graph"}
+      description="Add one kind of data at a time. Each step shows what it adds, the exact Cypher that runs, and which agent tool it unlocks."
+      actions={
+        <>
+          <select
+            value={tenant ?? ""}
+            onChange={(e) => go(e.target.value || null)}
+            className="max-w-56 min-w-0 rounded-lg border-2 border-line-2 bg-panel px-2 py-1 text-sm text-fg outline-none focus:border-accent"
+            aria-label="Company graph"
+          >
+            <option value="">+ New company graph</option>
+            {graphs.map((g) => (
+              <option key={g.id} value={g.id}>
+                {companyName(g.id, graphs)} ({g.nodes})
+              </option>
+            ))}
+          </select>
           {tenant && (
-            <Link href={`/?tenant=${tenant}`} className="hidden text-xs text-fg-2 hover:text-fg sm:inline">
-              Console →
-            </Link>
+            <ButtonLink href={`/?tenant=${tenant}`} variant="primary">
+              Investigate
+            </ButtonLink>
           )}
-          <UserMenu compact />
-        </div>
-      </header>
+        </>
+      }
+    >
 
       {!tenant ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -199,7 +200,7 @@ export function Builder() {
           </aside>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 
@@ -245,7 +246,7 @@ function LastRunPanel({ run, onClose }: { run: LastRun; onClose: () => void }) {
         {run.params !== undefined && (
           <details>
             <summary className="cursor-pointer text-2xs text-muted hover:text-fg">Parameters (values are never pasted into the query text)</summary>
-            <pre className="code mt-2 max-h-48 overflow-auto rounded-md border border-line bg-[#07090c] p-2.5 text-fg-2">{JSON.stringify(run.params, null, 2)}</pre>
+            <pre className="code mt-2 max-h-48 overflow-auto rounded-md border border-line bg-panel-3 p-2.5 text-fg-2">{JSON.stringify(run.params, null, 2)}</pre>
           </details>
         )}
       </div>

@@ -6,7 +6,6 @@
  *   Coordination — Finding -[:HANDED_TO]-> Agent (the only handoff channel)
  *   Procedural — Incident + Runbook per service (seeded, or written by the Scribe)
  */
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { AGENT_INFO, isTenant, type EpisodeView, type Finding, type GNode, type MemoryInspectorData, type Tenant } from "@blastradius/shared";
@@ -14,9 +13,8 @@ import { api } from "@/lib/api";
 import { fixtureEnabled, loadFixtureMemory } from "@/lib/fixture";
 import { fmtAgo, fmtDate, fmtTime, labelColor } from "@/lib/format";
 import { ConfidenceBar, CypherBlock, SectionTitle, Spinner, UidPill, cx } from "@/components/ui";
-import { Logo } from "@/components/console/Console";
-import { UserMenu } from "@/components/auth/UserMenu";
-import { GraphSwitcher, NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
+import { AppShell, Button, companyName } from "@/components/shell/AppShell";
+import { NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
 
 const ForceGraph = dynamic(() => import("@/components/graph/ForceGraph"), { ssr: false });
 
@@ -88,31 +86,26 @@ export function MemoryInspector() {
   if (graphs && graphs.length === 0) return <NoGraphs />;
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
-        <Link href={`/?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm font-semibold tracking-tight">Blastradius</span>
-        </Link>
-        <span className="h-4 w-px bg-line-2" />
-        <span className="text-sm text-fg-2">Memory inspector</span>
-        <GraphSwitcher tenant={tenant} graphs={graphs} onChange={switchTenant} />
-        <span className="font-mono text-2xs text-faint">graph blastradius_{tenant}</span>
-        {loading && <Spinner />}
-        <div className="ml-auto flex items-center gap-3">
-          {fixture && <span className="rounded border border-warn/40 bg-warn/10 px-1.5 font-mono text-2xs text-warn">FIXTURE</span>}
-          <button type="button" onClick={() => setShowCypher((v) => !v)} className={cx("rounded border px-2 py-0.5 font-mono text-2xs", showCypher ? "border-accent/50 bg-accent/15 text-accent" : "border-line-2 text-muted hover:text-fg")}>
-            Why? cypher
-          </button>
-          <Link href={`/people?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
-            People
-          </Link>
-          <Link href={`/?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
-            ← Console
-          </Link>
-          <UserMenu />
-        </div>
-      </header>
+    <AppShell
+      active="memory"
+      tenant={tenant}
+      graphs={graphs}
+      onTenantChange={switchTenant}
+      fixture={fixture}
+      layout="fill"
+      crumbs={[{ label: "Companies", href: "/start" }, { label: companyName(tenant, graphs), href: `/?tenant=${tenant}` }, { label: "What we learned" }]}
+      title="What we learned"
+      description="Agent memory, stored in the same graph: every past investigation step by step, the findings it produced, and the incidents and runbooks saved when an incident was closed."
+      actions={
+        <>
+          {loading && <Spinner />}
+          {fixture && <span className="rounded-full bg-[#fff7e0] px-2.5 py-0.5 text-xs font-semibold text-warn">Recorded replay</span>}
+          <Button onClick={() => setShowCypher((v) => !v)} aria-pressed={showCypher}>
+            {showCypher ? "Hide the Cypher" : "Show the Cypher"}
+          </Button>
+        </>
+      }
+    >
 
       <MemoryLegend />
 
@@ -155,7 +148,7 @@ export function MemoryInspector() {
         </aside>
 
         {/* episode chain */}
-        <main className="min-h-0 overflow-auto px-5 py-3">
+        <section className="min-h-0 overflow-auto px-5 py-3">
           {sess ? (
             <>
               <SectionTitle right={<span className="font-mono text-2xs text-faint">Session:{sess.sessionId}</span>}>Episodic memory · Session → Episode chain</SectionTitle>
@@ -174,7 +167,7 @@ export function MemoryInspector() {
                       <div key={`${h.findingId}-${h.to}`} className="flex items-center gap-2 rounded border border-line bg-panel px-2.5 py-1.5 text-xs">
                         <AgentTag name={h.from} />
                         <span className="font-mono text-2xs text-faint">
-                          -[:WROTE]→ <span className="text-[#e879f9]">Finding</span> -[:HANDED_TO]→
+                          -[:WROTE]→ <span className="text-[#a21caf]">Finding</span> -[:HANDED_TO]→
                         </span>
                         <AgentTag name={h.to} />
                         <span className="min-w-0 flex-1 truncate text-muted" title={h.claim}>
@@ -200,11 +193,11 @@ export function MemoryInspector() {
               </div>
             </div>
           )}
-        </main>
+        </section>
 
         {/* graph + procedural */}
         <aside className="flex min-h-0 flex-col border-l border-line">
-          <div className="relative h-[46%] min-h-[260px] border-b border-line bg-[radial-gradient(ellipse_at_center,#10141d_0%,#090b0f_75%)]">
+          <div className="relative h-[46%] min-h-[260px] border-b border-line bg-[radial-gradient(ellipse_at_center,#ffffff_0%,#f4f6f8_75%)]">
             <div className="absolute top-2 left-2.5 z-10 rounded border border-line bg-panel/85 px-2 py-0.5 text-2xs text-muted backdrop-blur">
               session memory subgraph · <span className="font-mono">{subgraph.nodes.length}n {subgraph.edges.length}e</span>
             </div>
@@ -290,7 +283,7 @@ export function MemoryInspector() {
           </div>
         </aside>
       </div>
-    </div>
+    </AppShell>
   );
 }
 
@@ -351,7 +344,7 @@ function SessionHeader({ data, sessionId }: { data: MemoryInspectorData; session
 function AgentTag({ name }: { name: string }) {
   const title = (AGENT_INFO as Record<string, { title: string }>)[name]?.title ?? name;
   return (
-    <span className="inline-flex items-center gap-1 rounded px-1 text-xs font-medium" style={{ color: AGENT_ACCENT[name] ?? "#94a3b8", background: `${AGENT_ACCENT[name] ?? "#94a3b8"}18` }}>
+    <span className="inline-flex items-center gap-1 rounded px-1 text-xs font-medium" style={{ color: `color-mix(in srgb, ${AGENT_ACCENT[name] ?? "#94a3b8"} 60%, #000)`, background: `${AGENT_ACCENT[name] ?? "#94a3b8"}22` }}>
       {title}
     </span>
   );
@@ -396,7 +389,7 @@ function FindingMini({ f, onUid }: { f: Finding; onUid: (u: string) => void }) {
   return (
     <div className="rounded border border-line/80 bg-panel-2 px-2 py-1.5">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-2xs text-[#e879f9]">PRODUCED →</span>
+        <span className="font-mono text-2xs text-[#a21caf]">PRODUCED →</span>
         <span className="rounded bg-panel-3 px-1 font-mono text-2xs text-muted uppercase">{f.kind}</span>
         <ConfidenceBar value={f.confidence} />
         {f.handTo && (

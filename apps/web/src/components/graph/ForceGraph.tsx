@@ -179,20 +179,20 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
         linkColor={(l) => {
           const a = alphaFor(l.id);
           const hot = spotlight?.has(l.id);
-          const base = hot ? "180,190,255" : "120,132,160";
-          return `rgba(${base},${(hot ? 0.85 : 0.38) * a})`;
+          const base = hot ? "9,114,211" : "95,107,122";
+          return `rgba(${base},${(hot ? 0.85 : 0.35) * a})`;
         }}
         linkWidth={(l) => (spotlight?.has(l.id) ? 1.8 : hoverLink === l.id ? 1.6 : 0.6)}
         linkDirectionalArrowLength={(l) => (spotlight?.has(l.id) ? 5 : 3)}
         linkDirectionalArrowRelPos={0.92}
         linkDirectionalArrowColor={(l) => {
           const a = alphaFor(l.id);
-          return spotlight?.has(l.id) ? `rgba(190,200,255,${0.95 * a})` : `rgba(140,150,175,${0.55 * a})`;
+          return spotlight?.has(l.id) ? `rgba(9,114,211,${0.95 * a})` : `rgba(95,107,122,${0.55 * a})`;
         }}
         linkDirectionalParticles={(l) => (focus?.has(l.id) ? 3 : 0)}
         linkDirectionalParticleWidth={2.2}
         linkDirectionalParticleSpeed={0.008}
-        linkDirectionalParticleColor={() => "#c7d0ff"}
+        linkDirectionalParticleColor={() => "#0972d3"}
         linkCanvasObjectMode={() => "after"}
         linkCanvasObject={(l, ctx, scale) => {
           // edge-type label on hover (and on focused edges when zoomed in)
@@ -206,9 +206,9 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
           const w = ctx.measureText(text).width;
           const mx = (s.x + t.x) / 2;
           const my = (s.y + t.y) / 2;
-          ctx.fillStyle = "rgba(9,11,15,0.85)";
+          ctx.fillStyle = "rgba(255,255,255,0.92)";
           ctx.fillRect(mx - w / 2 - 2 / scale, my - fs / 2 - 1.5 / scale, w + 4 / scale, fs + 3 / scale);
-          ctx.fillStyle = "#c7d0ff";
+          ctx.fillStyle = "#0972d3";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(text, mx, my);
@@ -260,11 +260,11 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
           ctx.fill();
           if (selected === n.id || hoverNode === n.id) {
             ctx.lineWidth = 1.8 / scale + 0.6;
-            ctx.strokeStyle = "#ffffff";
+            ctx.strokeStyle = "#0f141a";
             ctx.stroke();
           } else {
             ctx.lineWidth = 0.8;
-            ctx.strokeStyle = "rgba(9,11,15,0.9)";
+            ctx.strokeStyle = "rgba(255,255,255,0.95)";
             ctx.stroke();
           }
 
@@ -276,20 +276,20 @@ export default function ForceGraph({ nodes, edges, involved, focus, selected, on
             hoverNode === n.id ||
             selected === n.id ||
             (focus?.has(n.id) ?? false) ||
-            (important && scale > 0.7) ||
+            (important && scale > 0.35) ||
             ((involved?.has(n.id) ?? false) && scale > 1.5) ||
             scale > 2.6;
           if (show) {
             const fs = Math.max(9, 11.5 / Math.sqrt(scale)) / scale * Math.min(scale, 1.6);
-            ctx.font = `${spotlight?.has(n.id) ? 600 : 400} ${fs}px Inter, ui-sans-serif, system-ui`;
+            ctx.font = `${spotlight?.has(n.id) ? 600 : 400} ${fs}px "Open Sans", ui-sans-serif, system-ui`;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             const max = g.label === "Service" || g.label === "Person" ? 28 : 20;
             const text = g.name.length > max ? `${g.name.slice(0, max - 1)}…` : g.name;
             ctx.lineWidth = 3 / scale;
-            ctx.strokeStyle = "rgba(9,11,15,0.9)";
+            ctx.strokeStyle = "rgba(255,255,255,0.95)";
             ctx.strokeText(text, n.x, n.y + r + 2);
-            ctx.fillStyle = spotlight && !spotlight.has(n.id) ? "#8690a3" : "#e3e7ef";
+            ctx.fillStyle = spotlight && !spotlight.has(n.id) ? "#8d99a8" : "#0f141a";
             ctx.fillText(text, n.x, n.y + r + 2);
           }
           ctx.globalAlpha = 1;

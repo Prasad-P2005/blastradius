@@ -1,16 +1,17 @@
 "use client";
 /**
- * /start: the first page after login. Lists the graphs that exist (straight
- * from FalkorDB). With none, it leads into the builder to create the first one.
+ * /start: the first page after login. Lists the company graphs that exist
+ * (straight from FalkorDB). With none, it leads into the builder to create the first one.
  */
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { isSeedPack, tenantInfo } from "@blastradius/shared";
 import { api, type WorkspaceInfo } from "@/lib/api";
 import { BUILDER_STEPS } from "@/lib/builder-steps";
 import { fmtAgo } from "@/lib/format";
-import { Logo } from "@/components/console/Console";
 import { Spinner } from "@/components/ui";
-import { UserMenu, useUser } from "@/components/auth/UserMenu";
+import { useUser } from "@/components/auth/UserMenu";
+import { AppShell, ButtonLink, Panel, StatusIcon, companyName } from "@/components/shell/AppShell";
 
 export function Start() {
   const user = useUser();
@@ -25,122 +26,131 @@ export function Start() {
   }, []);
 
   return (
-    <div className="h-full overflow-y-auto">
-      <header className="sticky top-0 z-10 flex h-11 items-center gap-3 border-b border-line bg-panel/95 px-3 whitespace-nowrap backdrop-blur">
-        <Link href="/start" className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm font-semibold tracking-tight">Blastradius</span>
-        </Link>
-        <span className="h-4 w-px bg-line-2" />
-        <span className="text-sm text-fg-2">Your graphs</span>
-        <div className="ml-auto flex items-center gap-3">
-          <Link href="/about-us" className="hidden text-xs text-fg-2 hover:text-fg sm:inline">
-            About
-          </Link>
-          <UserMenu />
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-4 pt-10 pb-24 sm:px-6">
-        <div className="text-2xs font-semibold tracking-[0.12em] text-accent uppercase">Welcome{user ? `, ${user.name.split(" ")[0]}` : ""}</div>
-
+    <AppShell
+      active="graphs"
+      crumbs={[{ label: "Companies" }]}
+      title={`Welcome${user ? `, ${user.name.split(" ")[0]}` : ""}`}
+      description="Each company is one FalkorDB graph: its services, code changes, people, past incidents, decisions and chat, plus everything the agents have learned. Pick one to investigate, or build your own."
+      actions={
+        <ButtonLink href="/build" variant="primary">
+          Create company graph
+        </ButtonLink>
+      }
+    >
+      <div className="flex max-w-6xl flex-col gap-6 px-6 pb-16">
         {error && (
-          <div className="mt-4 rounded-md border border-bad/40 bg-bad/10 px-3 py-2 text-xs text-bad">
-            {error}
-            <div className="mt-1 text-fg-2">
-              Is FalkorDB running? <code className="font-mono">docker compose up -d falkordb postgres</code>
+          <div className="flex gap-2 rounded-xl border border-bad/30 bg-[#fff7f7] px-4 py-3 text-sm">
+            <StatusIcon tone="bad" />
+            <div>
+              <div className="font-semibold text-bad">Can't list the company graphs</div>
+              <div className="text-fg-2">
+                {error}. Is FalkorDB running? <code className="font-mono">docker compose up -d falkordb postgres</code>
+              </div>
             </div>
           </div>
         )}
         {!graphs && !error && (
-          <div className="mt-6 flex items-center gap-2 text-xs text-muted">
-            <Spinner /> Listing graphs in FalkorDB…
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Spinner /> Loading companies…
           </div>
         )}
 
         {graphs && graphs.length === 0 && (
-          <section className="mt-3">
-            <h1 className="text-3xl font-semibold tracking-tight text-fg">Let's build your first graph</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-fg-2">
-              There's no data yet, on purpose. You'll create an empty FalkorDB graph and fill it one kind of node at a time. Each step explains what you're adding,
-              shows the exact Cypher that runs, and lets you try the agent tool it unlocks. Type your own data or seed the sample company whenever you like.
+          <Panel title="Let's build your first company graph">
+            <p className="max-w-2xl text-sm leading-relaxed text-fg-2">
+              There's no data yet, on purpose. You'll create an empty FalkorDB graph and fill it one kind of thing at a time. Each step explains what you're adding,
+              shows the exact Cypher that runs, and lets you try the agent tool it unlocks. Type your own data or load a sample company whenever you like.
             </p>
-            <Link href="/build" className="mt-6 inline-block rounded-md bg-accent-2 px-5 py-2.5 text-sm font-medium text-white hover:bg-accent">
-              Create your first graph →
-            </Link>
-          </section>
+            <ButtonLink href="/build" variant="primary" className="mt-4">
+              Create your first graph
+            </ButtonLink>
+          </Panel>
         )}
 
         {graphs && graphs.length > 0 && (
-          <section className="mt-3">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-fg">Your graphs</h1>
-              <Link href="/build" className="rounded-md bg-accent-2 px-4 py-2 text-xs font-medium text-white hover:bg-accent">
-                + New graph
-              </Link>
-            </div>
-            <div className="mt-6 grid gap-3 md:grid-cols-2">
-              {graphs.map((g) => (
-                <div key={g.id} className="flex flex-col rounded-lg border border-line bg-panel p-5">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h2 className="truncate text-base font-semibold text-fg">{g.name}</h2>
-                    <code className="shrink-0 font-mono text-2xs text-faint">blastradius_{g.id}</code>
-                  </div>
-                  {g.description && <p className="mt-1 text-xs text-fg-2">{g.description}</p>}
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-2xs text-muted">
-                    <span>
-                      <b className="font-mono text-fg-2">{g.nodes}</b> nodes
-                    </span>
-                    <span>
-                      <b className="font-mono text-fg-2">{g.edges}</b> relationships
-                    </span>
-                    {g.createdBy && <span>by {g.createdBy}</span>}
-                    {g.createdAt && <span>{fmtAgo(g.createdAt)}</span>}
-                    {g.seeded.length > 0 && <span>seeded: {g.seeded.join(", ")}</span>}
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Link href={`/build?tenant=${g.id}`} className="rounded-md border border-line-2 px-3 py-1.5 text-xs text-fg hover:bg-panel-3">
-                      Continue building
-                    </Link>
-                    <Link href={`/?tenant=${g.id}`} className="rounded-md bg-accent-2 px-3 py-1.5 text-xs font-medium text-white hover:bg-accent">
-                      Investigate →
-                    </Link>
-                    <Link href={`/memory?tenant=${g.id}`} className="rounded-md px-2 py-1.5 text-xs text-fg-2 hover:text-fg">
-                      Memory
-                    </Link>
-                    <Link href={`/people?tenant=${g.id}`} className="rounded-md px-2 py-1.5 text-xs text-fg-2 hover:text-fg">
-                      People
-                    </Link>
-                  </div>
-                </div>
+          <Panel title={`Companies (${graphs.length})`} description="Start with Slice Pizza if you're new: a small food-delivery company anyone can follow.">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {[...graphs].sort(easiestFirst).map((g) => (
+                <CompanyCard key={g.id} g={g} graphs={graphs} />
               ))}
             </div>
-          </section>
+          </Panel>
         )}
 
-        <section className="mt-14">
-          <div className="text-2xs font-semibold tracking-[0.12em] text-accent uppercase">How the builder teaches it</div>
-          <h2 className="mt-2 text-xl font-semibold tracking-tight text-fg">Seven steps, each one unlocking something the agents can do</h2>
-          <ol className="mt-5 grid gap-2 md:grid-cols-2">
+        <Panel title="Build your own, step by step" description="The graph builder adds one kind of data at a time. Each step unlocks something the agents can do.">
+          <ol className="grid gap-3 md:grid-cols-2">
             <PathStep n={0} title="Create a graph" text="One FalkorDB graph per company, with its indexes." />
             {BUILDER_STEPS.map((s, i) => (
               <PathStep key={s.id} n={i + 1} title={s.title} text={s.why} tools={s.try.map((t) => t.tool)} />
             ))}
-            <PathStep n={BUILDER_STEPS.length + 1} title="Investigate" text="Fire an alert on your graph and watch five agents answer, each claim with a Why?" />
+            <PathStep n={BUILDER_STEPS.length + 1} title="Investigate" text="Fire an alert on your graph and watch the agents answer, each answer with its evidence." />
           </ol>
-        </section>
-      </main>
+        </Panel>
+      </div>
+    </AppShell>
+  );
+}
+
+/** Slice (the hand-written easy example) first, then the other sample companies, then user-built graphs. */
+function easiestFirst(a: WorkspaceInfo, b: WorkspaceInfo): number {
+  const rank = (g: WorkspaceInfo) => (g.id === "slice" ? 0 : isSeedPack(g.id) ? 1 : 2);
+  return rank(a) - rank(b) || a.id.localeCompare(b.id);
+}
+
+function CompanyCard({ g, graphs }: { g: WorkspaceInfo; graphs: WorkspaceInfo[] }) {
+  const info = tenantInfo(g.id);
+  return (
+    <div className="flex flex-col rounded-xl border border-line-2/70 bg-panel p-5">
+      <div className="flex items-start gap-2">
+        <h3 className="min-w-0 flex-1 truncate text-lg font-bold text-fg">{companyName(g.id, graphs)}</h3>
+        {g.id === "slice" && <span className="shrink-0 rounded-full bg-[#e9f6e9] px-2 py-0.5 text-xs font-semibold text-ok">Easiest</span>}
+      </div>
+      <p className="mt-1 min-h-10 text-sm text-fg-2">{g.description || info.description}</p>
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line pt-3 text-sm">
+        <div>
+          <dt className="text-xs text-muted">Things in the graph</dt>
+          <dd className="font-semibold text-fg">{g.nodes.toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted">Connections</dt>
+          <dd className="font-semibold text-fg">{g.edges.toLocaleString()}</dd>
+        </div>
+        <div className="col-span-2">
+          <dt className="text-xs text-muted">Data</dt>
+          <dd className="truncate text-fg-2" title={info.sourceRepo}>
+            {g.id === "slice"
+              ? "Fully synthetic, hand-written"
+              : isSeedPack(g.id)
+                ? `Real git history of ${info.sourceRepo}`
+                : `Built in the graph builder${g.createdAt ? `, ${fmtAgo(g.createdAt)}` : ""}`}
+          </dd>
+        </div>
+      </dl>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <ButtonLink href={`/?tenant=${g.id}`} variant="primary">
+          Investigate
+        </ButtonLink>
+        <ButtonLink href={`/?tenant=${g.id}&mode=ask`}>Ask</ButtonLink>
+        <span className="ml-auto flex gap-3 text-sm">
+          <Link href={`/people?tenant=${g.id}`} className="text-accent hover:underline">
+            People
+          </Link>
+          <Link href={`/build?tenant=${g.id}`} className="text-accent hover:underline">
+            Edit
+          </Link>
+        </span>
+      </div>
     </div>
   );
 }
 
 function PathStep({ n, title, text, tools }: { n: number; title: string; text: string; tools?: string[] }) {
   return (
-    <li className="flex gap-3 rounded-lg border border-line bg-panel p-4">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line-2 font-mono text-2xs text-muted">{n}</span>
+    <li className="flex gap-3 rounded-xl border border-line-2/60 p-4">
+      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#f0f7ff] text-sm font-bold text-accent">{n}</span>
       <div className="min-w-0">
-        <div className="text-sm font-semibold text-fg">{title}</div>
-        <p className="mt-1 text-xs leading-relaxed text-fg-2">{text}</p>
+        <div className="text-sm font-bold text-fg">{title}</div>
+        <p className="mt-1 text-sm leading-relaxed text-fg-2">{text}</p>
         {tools && tools.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {tools.map((t) => (

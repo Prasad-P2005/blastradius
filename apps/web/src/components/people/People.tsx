@@ -13,9 +13,8 @@ import { api } from "@/lib/api";
 import { fixtureEnabled, loadFixturePeople } from "@/lib/fixture";
 import { fmtAgo, labelColor, uidKey } from "@/lib/format";
 import { CypherBlock, SectionTitle, Spinner, UidPill, cx } from "@/components/ui";
-import { Logo } from "@/components/console/Console";
-import { UserMenu } from "@/components/auth/UserMenu";
-import { GraphSwitcher, NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
+import { AppShell, companyName } from "@/components/shell/AppShell";
+import { NoGraphs, useGraphs } from "@/components/graphs/GraphSwitcher";
 
 const POLL_MS = 5_000;
 const NEW_HIGHLIGHT_MS = 6_000;
@@ -172,26 +171,18 @@ export function People() {
   if (graphs && graphs.length === 0) return <NoGraphs />;
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
-        <Link href={`/?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="flex items-center gap-2">
-          <Logo />
-          <span className="text-sm font-semibold tracking-tight">Blastradius</span>
-        </Link>
-        <span className="h-4 w-px bg-line-2" />
-        <span className="text-sm text-fg-2">People</span>
-        <GraphSwitcher tenant={tenant} graphs={graphs} onChange={switchTenant} />
-        <div className="ml-auto flex items-center gap-3">
-          {fixture && <span className="rounded border border-warn/40 bg-warn/10 px-1.5 font-mono text-2xs text-warn">FIXTURE</span>}
-          <Link href={`/memory?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
-            Memory inspector
-          </Link>
-          <Link href={`/?tenant=${tenant}${fixture ? "&fixture=1" : ""}`} className="text-xs text-fg-2 hover:text-fg">
-            ← Console
-          </Link>
-          <UserMenu />
-        </div>
-      </header>
+    <AppShell
+      active="people"
+      tenant={tenant}
+      graphs={graphs}
+      onTenantChange={switchTenant}
+      fixture={fixture}
+      layout="fill"
+      crumbs={[{ label: "Companies", href: "/start" }, { label: companyName(tenant, graphs), href: `/?tenant=${tenant}` }, { label: "People & experts" }]}
+      title="People & experts"
+      description="Everyone in the company graph: who is on call, what they've worked on, and what the agents have said about them. The feed updates live during an investigation."
+      actions={fixture ? <span className="rounded-full bg-[#fff7e0] px-2.5 py-0.5 text-xs font-semibold text-warn">Recorded replay</span> : undefined}
+    >
 
       <div className="grid min-h-0 flex-1 grid-cols-[340px_minmax(0,1fr)]">
         {/* roster */}
@@ -223,7 +214,7 @@ export function People() {
                   </label>
                 }
               >
-                Real contributors · git
+                Code contributors
               </SectionTitle>
             </div>
             {real.map((p) => (
@@ -231,12 +222,12 @@ export function People() {
             ))}
           </div>
           <div className="border-t border-line px-3 py-2 text-2xs leading-relaxed text-faint">
-            Personas are fictional. Real contributors appear only with their real public PRs.
+            Personas are fictional. Contributors appear only with the code changes they made: real git history for Acme and Globex, invented for Slice.
           </div>
         </aside>
 
         {/* person + feed */}
-        <main className="min-h-0 overflow-auto">
+        <section className="min-h-0 overflow-auto">
           {!person ? (
             <div className="pt-16 text-center text-sm text-faint">{people.length ? "Select a person." : peopleErr ? "" : <Spinner />}</div>
           ) : (
@@ -284,7 +275,8 @@ export function People() {
                 )}
                 {activity && activity.items.length === 0 && <div className="text-xs text-faint">No activity recorded.</div>}
                 <ol className="relative flex flex-col">
-                  {activity?.items.map((it) => {
+                  {/* upcoming on-call weeks are a schedule, not activity: leave them out of the feed */}
+                  {activity?.items.filter((it) => !(it.kind === "on_call" && it.at > Date.now())).map((it) => {
                     const since = newSince.current.get(itemKey(it));
                     const fresh = since !== undefined && Date.now() - since < NEW_HIGHLIGHT_MS;
                     return <FeedItem key={itemKey(it)} it={it} fresh={fresh} tenant={tenant} fixture={fixture} />;
@@ -293,16 +285,16 @@ export function People() {
               </div>
             </div>
           )}
-        </main>
+        </section>
       </div>
-    </div>
+    </AppShell>
   );
 }
 
-function SourceBadge({ persona }: { persona: boolean }) {
-  return persona ? (
-    <span className="rounded border border-[#c084fc]/40 bg-[#c084fc]/10 px-1 font-mono text-[10px] leading-4 text-[#c084fc]" title="Fictional persona (synthetic data)">
-      synthetic
+function SourceBadge({ persona, synthetic }: { persona: boolean; synthetic?: boolean }) {
+  return persona || synthetic ? (
+    <span className="rounded border border-[#c084fc]/40 bg-[#c084fc]/10 px-1 font-mono text-[10px] leading-4 text-[#9333ea]" title={persona ? "Fictional persona (synthetic data)" : "Fictional author in a hand-written sample company"}>
+      fictional
     </span>
   ) : (
     <span className="rounded border border-ok/40 bg-ok/10 px-1 font-mono text-[10px] leading-4 text-ok" title="Real public git author">
@@ -337,7 +329,7 @@ function RosterRow({ p, active, onClick }: { p: PersonSummary; active: boolean; 
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-xs font-medium text-fg">{p.name}</span>
-          <SourceBadge persona={p.persona} />
+          <SourceBadge persona={p.persona} synthetic={p.synthetic} />
           {p.isBot && <span className="font-mono text-[10px] text-faint">bot</span>}
         </span>
         <span className="block truncate text-2xs text-muted">
@@ -362,7 +354,7 @@ function PersonHeader({ p, lastPoll }: { p: PersonSummary; lastPoll: number | nu
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-base font-semibold tracking-tight">{p.name}</h1>
-          <SourceBadge persona={p.persona} />
+          <SourceBadge persona={p.persona} synthetic={p.synthetic} />
           {p.isBot && <span className="rounded border border-line-2 px-1 font-mono text-[10px] text-faint">bot</span>}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
